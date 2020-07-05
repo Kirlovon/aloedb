@@ -1,2 +1,7 @@
+# IDE configs
 .idea/
 .vscode/
+
+# Scripts
+*.bat
+*.cmd
