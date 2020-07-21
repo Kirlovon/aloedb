@@ -70,9 +70,9 @@ export function length(value: number): SearchFunction {
 }
 
 // TODO
-// export function elementsMatch(...values: SearchQueryValue[]): SearchFunction {
-// 	return (target: DocumentValue) => isArray(target) && target.every(value => matchValues(value, target));
-// }
+export function elementsMatch(...values: SearchQueryValue[]): SearchFunction {
+	return (target: DocumentValue) => isArray(target) && target.every((value: any) => matchValues(value, target));
+}
 
 export function not(value: SearchQueryValue): SearchFunction {
 	return (target: DocumentValue) => matchValues(value, target) === false;

@@ -8,8 +8,9 @@
 </p>
 
 ## Features
-* ⚖ No dependencies, ___even without [std](https://deno.land/std)!___
 * ✨ Simple to use API, similar to [MongoDB](https://www.mongodb.com/)!
+* ⚖ No dependencies, ___even without [std](https://deno.land/std)!___
+* 🚀 Optimized for a large number of operations.
 * 📁 Stores data in JSON file.
 
 ## Example

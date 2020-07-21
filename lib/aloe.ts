@@ -248,7 +248,7 @@ class AloeDB<Schema extends Document> {
 
 	public select<T extends Schema>(query: SearchQuery<T>): Cursor<Schema>;
 	public select<T extends Document>(query: SearchQuery<T>): Cursor<Document> {
-		return new Cursor<T>(query, this.config);
+		return new Cursor(query, this.documents, this.config);
 	}
 
 	/**

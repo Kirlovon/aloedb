@@ -1,36 +1,40 @@
+import Search from './search.ts';
 import { SearchQuery, Document, CursorMethods, DatabaseConfig } from './declarations.ts';
 
 // TODO
 class Cursor<Schema extends Document = Document> {
-	/** Found documents */
-	private found: Schema[] = [];
-
+	
 	/** Main search query. */
 	private query: SearchQuery = {};
+	
+	/** Valid documents */
+	private documents: Document[] = [];
 
 	/** Methods to execute. */
 	private methods: CursorMethods[] = [];
 
-	constructor(query: SearchQuery, config: DatabaseConfig) {}
+	/** Database configuration. */
+	private config: DatabaseConfig;
 
-	public async getOne(): Promise<Schema | null> {
-		await this.execute();
-		return this.found.length > 0 ? this.found[0] : null;
+	constructor(query: SearchQuery, documents: Document[], config: DatabaseConfig) {
+		this.query = query;
+		this.config = config;
+		this.documents = [...documents];
 	}
 
-	public async getMany(): Promise<Schema[]> {
+	public async getOne(): Promise<Document | null> {
 		await this.execute();
-		return this.found;
+		return this.documents.length > 0 ? this.documents[0] : null;
 	}
 
-	public async map(): Promise<any> {
+	public async getMany(): Promise<Document[]> {
 		await this.execute();
-		return this.found;
+		return this.documents;
 	}
 
 	public async count(): Promise<number> {
 		await this.execute();
-		return this.found.length;
+		return this.documents.length;
 	}
 
 	public limit(number: number): this {
@@ -59,12 +63,11 @@ class Cursor<Schema extends Document = Document> {
 		const { query, methods } = this;
 
 		// Search
-		for (const key in query) {
-			this.found = [];
-		}
+		const found = Search.documents(query, this.documents);
+
 
 		// If nothing found
-		if (this.found.length === 0) return;
+		if (this.documents.length === 0) return;
 	}
 }
 

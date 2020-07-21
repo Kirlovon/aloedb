@@ -78,7 +78,6 @@ export type SearchQuery<T extends Document = Document> = Partial<{ [K in keyof T
  */
 export type SearchQueryValue = DocumentValue | SearchFunction | RegExp;
 
-export type UpdateQuery = { [key: string]: DocumentValue }
 /**
  * Search function for search queries.
  */
@@ -88,6 +87,10 @@ export type SearchFunction = (value: DocumentValue) => boolean;
  * Sorting function.
  */
 export type SortFunction = (a: DocumentValue, b: DocumentValue) => number;
+
+export type UpdateQuery = Document | UpdateFunction;
+
+export type UpdateFunction = (document: Document) => void;
 
 /**
  * Supported primitives.
