@@ -2,9 +2,9 @@ import Search from './search.ts';
 import Cursor from './cursor.ts';
 import Storage from './storage.ts';
 import DatabaseError from './error.ts';
-import { deepClone } from './utils.ts';
-import { prepareObject } from './preparer.ts';
-import { Document, DatabaseConfig, SearchQuery } from './declarations.ts';
+import { prepareObject } from './prepare.ts';
+import { deepClone, setNestedValue } from './utils.ts';
+import { Document, DatabaseConfig, SearchQuery, DocumentValue } from './declarations.ts';
 import { isUndefined, isString, isBoolean, isObject, isArray, isNull } from './types.ts';
 import { type } from './operators.ts';
 
@@ -89,13 +89,12 @@ class AloeDB<Schema extends Document> {
 			const { cloneDocuments, schemaValidator } = this.config;
 			if (!isArray(documents)) throw new TypeError('Input must be an array');
 
-			
-			for (let i = 0; i < this.documents.length; i++) {
-				const document: Document = this.documents[i];
+			for (let i = 0; i < documents.length; i++) {
+				const document: Document = documents[i];
 				if (!isObject(document)) throw new TypeError('Values must be an objects');
 				
 				if (schemaValidator) await schemaValidator(document);
-				if (cloneDocuments) documents = deepClone(documents);
+				if (cloneDocuments) documents[i] = deepClone(documents[i]);
 				prepareObject(document);
 			}
 
@@ -160,37 +159,92 @@ class AloeDB<Schema extends Document> {
 	 * @param searchQuery
 	 * @param updateQuery
 	 */
-	// public async updateOne<T extends Schema>(searchQuery: SearchQuery<T>, updateQuery: any): Promise<T> {
-	// 	try {
-	// 		const found: Document[] = Search.documents(searchQuery, this.documents);
-
-	// 		// Write to the file
-	// 		await this.save();
-	// 	} catch (error) {
-	// 		throw new DatabaseError('Error updating document', error);
-	// 	}
-	// }
-
-	public async updateMany<T extends Document = Schema>(searchQuery: SearchQuery<T>, updateQuery: any) {
+	public async updateOne<T extends Schema>(searchQuery: SearchQuery<T>, updateQuery: Document) {
 		try {
-			const found: Document[] = Search.documents(searchQuery, this.documents);
+			const { cloneDocuments } = this.config;
 
-			// Write to the file
+			const found: Document[] = Search.documents(searchQuery, this.documents);
+			if (found.length === 0) return;
+
+			const document: Document = found[0];
+			for(const key in updateQuery) {
+				const queryValue: DocumentValue = updateQuery[key];
+				setNestedValue(key, queryValue, document);
+			}
+
+			await this.save()
+			
+			const result: Document = cloneDocuments ? deepClone(document) : document;
+			return result;
+		} catch (error) {
+			throw new DatabaseError('Error updating document', error);
+		}
+	}
+
+	public async updateMany<T extends Document = Schema>(searchQuery: SearchQuery<T>, updateQuery: Document) {
+		try {
+			const { cloneDocuments } = this.config;
+
+			const found: Document[] = Search.documents(searchQuery, this.documents);
+			if (found.length === 0) return;
+
+			for (let i = 0; i < found.length; i++) {
+				const document: Document = found[i];
+
+				for(const key in updateQuery) {
+					const queryValue = updateQuery[key];
+					setNestedValue(key, queryValue, document);
+				}
+			}
+
 			await this.save();
+
+			const result: Document[] = cloneDocuments ? deepClone(found) : found;
+			return result;
 		} catch (error) {
 			throw new DatabaseError('Error updating documents', error);
 		}
 	}
 
-	// public async deleteOne<SearchSchema extends Schema>(query?: SearchQuery<SearchSchema>) {}
-	// public async deleteMany<SearchSchema extends Document>(query?: SearchQuery<SearchSchema>): Promise<void> {
+	public async deleteOne<SearchSchema extends Schema>(query?: SearchQuery<SearchSchema>) {
+		try {
+			const { cloneDocuments } = this.config;
 
-	// 	process(query, this.documents, (document, index) => {
-	// 		this.documents[index] = null as any;
-	// 	});
+			const found: number[] = Search.indexes(query, this.documents);
+			if (found.length === 0) return;
 
-	// 	this.documents = this.documents.filter(document => !isNull(document));
-	// }
+			const index: number = found[0];
+			const document: Document = this.documents[index];
+			this.documents.splice(index, 1);
+			await this.save();
+
+			return document;
+		} catch (error) {
+			throw new DatabaseError('Error deleting documents', error);
+		}
+	}
+
+	public async deleteMany<SearchSchema extends Document>(query?: SearchQuery<SearchSchema>) {
+		try {
+			const found: number[] = Search.indexes(query, this.documents);
+			if (found.length === 0) return;
+			
+			const deleted: Document[] = [];
+			for (let i = 0; i < found.length; i++) {
+				const index: number = found[i];
+
+				deleted.push(this.documents[index]);
+				delete this.documents[index];		
+			}
+
+			this.documents = this.documents.filter((document) => !isUndefined(document));
+			await this.save();
+
+			return deleted;
+		} catch (error) {
+			throw new DatabaseError('Error deleting documents', error);
+		}
+	}
 
 	public select<T extends Schema>(query: SearchQuery<T>): Cursor<Schema>;
 	public select<T extends Document>(query: SearchQuery<T>): Cursor<Document> {
@@ -220,41 +274,25 @@ class AloeDB<Schema extends Document> {
 
 export default AloeDB;
 
-interface Data extends Document {
-	value: string | number;
+// TODO: Fix onlyInMemory
+const db = new AloeDB({ cloneDocuments: false, onlyInMemory: true });
+
+console.time('insert');
+for (let i = 0; i < 100000; i++) {
+	await db.insertOne({ value: i });
 }
+console.timeEnd('insert');
 
-interface Data2 extends Data {
-	value2: boolean;
-}
+console.time('find');
+const x = await db.findMany({ value: type('number') });
+console.timeEnd('find');
 
-const db = new AloeDB<Data>();
+console.time('update');
+const y = await db.updateMany({ value: type('number') }, { value: 'x' });
+console.timeEnd('update');
 
-const toInsert = [];
-for (let i = 0; i < 1000; i++) {
-	toInsert.push({ value: i });
-}
+console.time('delete');
+const z = await db.deleteMany({ value: 'x' });
+console.timeEnd('delete');
 
-const dsf = await db.insertOne({ value2: true })
-
-console.time('test');
-
-await db.insertMany(toInsert);
-console.timeEnd('test');
-
-console.time('count');
-for (let i = 0; i < 1000; i++) {
-	const x = await db.count<Data2>({ value: 'sdf' });
-}
-console.timeEnd('count');
-
-// console.time('update');
-// for(let i = 0; i < 100; i++) {
-// 	const x = await db.updateMany({ value: (value) => true }, { value: 'x' });
-// }
-// console.timeEnd('update');
-
-setTimeout(async () => {
-	console.log(await db.count({ value: type('number') }));
-	// console.log(db.documents)
-}, 1000);
+console.log(db.documents.length)

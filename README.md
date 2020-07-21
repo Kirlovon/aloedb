@@ -1,7 +1,7 @@
 ![Logo](https://raw.githubusercontent.com/Kirlovon/AloeDB/master/other/head.png)
 
-# AloeDB
-Light, Embeddable, NoSQL database for Deno.
+<h3 align="center">AloeDB</h3>
+<p align="center">Light, Embeddable, NoSQL database for Deno</p>
 
 ## Features
 * ⚖ No dependencies, ___even without [std](https://deno.land/std)!___

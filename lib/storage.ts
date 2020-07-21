@@ -1,5 +1,5 @@
 import DatabaseError from './error.ts';
-import { prepareObject } from './preparer.ts';
+import { prepareObject } from './prepare.ts';
 import { isUndefined, isArray, isNumber, isObject } from './types.ts';
 import { DatabaseConfig, DatabaseFile, Document } from './declarations.ts';
 import { writeFile, readFileSync, ensureFileSync, renameFile, fileExistsSync } from './files.ts';
