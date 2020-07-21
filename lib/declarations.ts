@@ -31,20 +31,11 @@ export interface DatabaseConfig {
 	cloneDocuments: boolean;
 
 	/**
-	 * Resolve async operations only when the data writting finished.
-	 * If enabled, there may be performance issues at high loads.
-	 */
-	instantWriting: boolean;
-
-	/**
 	 * Manual document validation function.
 	 * If the document does not pass the validation, just throw the error.
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
 	 */
 	schemaValidator?: SchemaValidator;
-
-	// TODO
-	// documentModifier: (document: Document) => void | Promise<void>;
 }
 
 /**
@@ -80,7 +71,7 @@ export type SchemaValidator = (document: Document) => void | Promise<void>;
 /**
  * Search query.
  */
-export type SearchQuery<T extends Document> = Partial<{ [K in keyof T]: T[K] | SearchFunction | RegExp }>;
+export type SearchQuery<T extends Document = Document> = Partial<{ [K in keyof T]: T[K] | SearchFunction | RegExp }>;
 
 /**
  * Search query value.

@@ -1,16 +1,17 @@
-import { SearchQuery, Document, CursorMethods } from './declarations.ts';
+import { SearchQuery, Document, CursorMethods, DatabaseConfig } from './declarations.ts';
 
-class Cursor<Schema extends Document> {
+// TODO
+class Cursor<Schema extends Document = Document> {
 	/** Found documents */
 	private found: Schema[] = [];
 
 	/** Main search query. */
-	private query: SearchQuery<Schema> = {};
+	private query: SearchQuery = {};
 
 	/** Methods to execute. */
 	private methods: CursorMethods[] = [];
 
-	constructor(query: SearchQuery<Schema>) {}
+	constructor(query: SearchQuery, config: DatabaseConfig) {}
 
 	public async getOne(): Promise<Schema | null> {
 		await this.execute();

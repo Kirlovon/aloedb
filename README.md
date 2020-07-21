@@ -1,3 +1,5 @@
+![Logo](https://raw.githubusercontent.com/Kirlovon/AloeDB/master/other/head.png)
+
 # AloeDB
 Light, Embeddable, NoSQL database for Deno.
 

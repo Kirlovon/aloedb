@@ -30,7 +30,6 @@ export function getObjectLength(target: UnknownObject): number {
 export function deepClone<T>(target: T): T {
 	if (target === null) return target;
 
-	// Deep array copy
 	if (isArray(target)) {
 		const clone: any = [];
 
@@ -41,7 +40,6 @@ export function deepClone<T>(target: T): T {
 		return clone;
 	}
 
-	// Deep object copy
 	if (isObject(target)) {
 		const clone: any = {};
 
@@ -52,7 +50,6 @@ export function deepClone<T>(target: T): T {
 		return clone;
 	}
 
-	// No need to copy
 	return target;
 }
 
@@ -65,7 +62,6 @@ export function deepClone<T>(target: T): T {
 export function deepCompare(targetA: any, targetB: any): boolean {
 	if (targetA === null) return targetB === null;
 
-	// Arrays comparison
 	if (isArray(targetA) && isArray(targetB)) {
 		if (targetA.length !== targetB.length) return false;
 
@@ -76,7 +72,6 @@ export function deepCompare(targetA: any, targetB: any): boolean {
 		return true;
 	}
 
-	// Objects comparison
 	if (isObject(targetA) && isObject(targetB)) {
 		if (getObjectLength(targetA) !== getObjectLength(targetB)) return false;
 
@@ -87,7 +82,6 @@ export function deepCompare(targetA: any, targetB: any): boolean {
 		return true;
 	}
 
-	// All other values
 	return targetA === targetB;
 }
 

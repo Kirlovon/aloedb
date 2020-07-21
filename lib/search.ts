@@ -1,63 +1,107 @@
 import matchValues from './match.ts';
-import { isUndefined, isNull } from './types.ts';
+import { isUndefined } from './types.ts';
 import { getNestedValue, isObjectEmpty } from './utils.ts';
 import { SearchQuery, Document, DocumentValue, SearchQueryValue } from './declarations.ts';
 
-/**
- * Find documents.
- * @param query Query to search document by.
- * @param documents Documents to search in.
- * @returns Found document.
- */
-export async function search(query: SearchQuery<Document> | undefined, documents: Document[]): Promise<Document[]> {
-	let found: Array<Document | null> = [];
-	let firstSearch: boolean = true;
+/** Search methods. */
+class Search {
 
-	// If no documents
-	if (documents.length === 0) return [];
-
-	// If query is empty
-	if (isUndefined(query) || isObjectEmpty(query)) return found as Document[];
-
-	// Parse query
-	for (const key in query) {
-		const queryValue: SearchQueryValue = query[key] as SearchQueryValue;
-		const isNested: boolean = key.includes('.');
-
-		// Сreate an array of possible matching documents
-		if (firstSearch) {
-			firstSearch = false;
-			
-			for (let i = 0; i < documents.length; i++) {
-				const document = documents[i];
-				const documentValue: DocumentValue = isNested ? getNestedValue(key, document) : document[key];
+	/**
+	 * Find documents.
+	 * @param query Documents search query.
+	 * @param documents An array of documents to look for the suitable ones.
+	 * @returns Found documents.
+	 */
+	public static documents(query: SearchQuery | undefined, documents: Document[]): Document[] {
+		let found: Document[] = [];
+		let firstSearch: boolean = true;
+	
+		if (documents.length === 0) return [];
+		if (isUndefined(query) || isObjectEmpty(query)) return [...documents];
+	
+		for (const key in query) {
+			const queryValue = query[key];
+			const isNested = key.includes('.');
+	
+			if (firstSearch) {
+				firstSearch = false;
+	
+				for (let i = 0; i < documents.length; i++) {
+					const document = documents[i];
+					const documentValue = isNested ? getNestedValue(key, document) : document[key];
+	
+					const isMatched = matchValues(queryValue, documentValue);
+					if (isMatched) found.push(document);
+				}
+	
+				if (found.length === 0) return [];
+				continue;
+			}
+	
+			for (let i = 0; i < found.length; i++) {
+				if (isUndefined(found[i])) continue;
+	
+				const document = found[i];
+				const documentValue = isNested ? getNestedValue(key, document) : document[key];
 				
 				const isMatched = matchValues(queryValue, documentValue);
-				if (isMatched) found.push(document);
+				if (isMatched) continue;
+				delete found[i];
 			}
-
-			if (documents.length === 0) return [];
-			continue;
 		}
-
-		// Match documents and query
-		for (let i = 0; i < found.length; i++) {
-			if (isNull(found[i])) continue;
-
-			const document: Document = found[i] as Document;
-			const documentValue: DocumentValue = isNested ? getNestedValue(key, document) : document[key];
-			
-			const isMatched = matchValues(queryValue, documentValue);
-			if (isMatched) continue;
-
-			// Nullify the inappropriate document
-			found[i] = null;
-		}
-
+	
+		found = found.filter((value) => !isUndefined(value));
+		return found;
 	}
 
-	// Delete all nullified documents
-	found = found.filter((value) => !isNull(value));
-
-	return found as Document[];
+	/**
+	 * Find documents indexes.
+	 * @param query Documents search query.
+	 * @param documents An array of documents to look for the suitable ones.
+	 * @returns Found indexes.
+	 */
+	public static indexes(query: SearchQuery | undefined, documents: Document[]): number[] {
+		let found: number[] = [];
+		let firstSearch: boolean = true;
+	
+		if (documents.length === 0) return [];
+		if (isUndefined(query) || isObjectEmpty(query)) return [...Array(documents.length).keys()];
+	
+		for (const key in query) {
+			const queryValue = query[key];
+			const isNested = key.includes('.');
+	
+			if (firstSearch) {
+				firstSearch = false;
+	
+				for (let i = 0; i < documents.length; i++) {
+					const document = documents[i];
+					const documentValue = isNested ? getNestedValue(key, document) : document[key];
+	
+					const isMatched = matchValues(queryValue, documentValue);
+					if (isMatched) found.push(i);
+				}
+	
+				if (found.length === 0) return [];
+				continue;
+			}
+	
+			for (let i = 0; i < found.length; i++) {
+				if (isUndefined(found[i])) continue;
+	
+				const index = found[i];
+				const document = documents[index];
+				const documentValue = isNested ? getNestedValue(key, document) : document[key];
+				
+				const isMatched = matchValues(queryValue, documentValue);
+				if (isMatched) continue;
+				delete found[i];
+			}
+		}
+	
+		found = found.filter((value) => !isUndefined(value));
+		return found;
+	}
 }
+
+export default Search;
