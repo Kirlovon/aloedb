@@ -3,6 +3,10 @@
 <h3 align="center">AloeDB</h3>
 <p align="center">Light, Embeddable, NoSQL database for Deno</p>
 
+<p align="center">
+    <b>Work in progress!</b>
+</p>
+
 ## Features
 * ⚖ No dependencies, ___even without [std](https://deno.land/std)!___
 * ✨ Simple to use API, similar to [MongoDB](https://www.mongodb.com/)!
