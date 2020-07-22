@@ -13,7 +13,7 @@ import { type } from './operators.ts';
  */
 class AloeDB<Schema extends Document> {
 	/** In-Memory documents storage. */
-	public documents: Document[] = [];
+	public documents: Schema[] = [];
 
 	/** File storage manager. */
 	private storage: Storage;
@@ -50,7 +50,7 @@ class AloeDB<Schema extends Document> {
 
 		this.config = { ...this.config, ...config };
 		this.storage = new Storage(this.config);
-		this.documents = this.storage.read();
+		this.documents = this.storage.read() as Schema[];
 	}
 
 	/**
@@ -58,7 +58,7 @@ class AloeDB<Schema extends Document> {
 	 * @param document Document to insert.
 	 * @returns Inserted document.
 	 */
-	public async insertOne<T extends Document>(document: T): Promise<T>;
+	public async insertOne<T extends Schema>(document: T): Promise<T>;
 	public async insertOne(document: Schema): Promise<Schema> {
 		try {
 			const { cloneDocuments, schemaValidator } = this.config;
@@ -73,7 +73,6 @@ class AloeDB<Schema extends Document> {
 
 			const result: Document = cloneDocuments ? deepClone(document) : document;
 			return result as Schema;
-
 		} catch (error) {
 			throw new DatabaseError('Error inserting document', error);
 		}
@@ -84,7 +83,8 @@ class AloeDB<Schema extends Document> {
 	 * @param documents Array of documents to insert.
 	 * @returns Array of inserted documents.
 	 */
-	public async insertMany<T extends Schema>(documents: T[]): Promise<T[]> {
+	public async insertMany<T extends Schema>(documents: T[]): Promise<T[]>;
+	public async insertMany(documents: Schema[]): Promise<Schema[]> {
 		try {
 			const { cloneDocuments, schemaValidator } = this.config;
 			if (!isArray(documents)) throw new TypeError('Input must be an array');
@@ -92,7 +92,7 @@ class AloeDB<Schema extends Document> {
 			for (let i = 0; i < documents.length; i++) {
 				const document: Document = documents[i];
 				if (!isObject(document)) throw new TypeError('Values must be an objects');
-				
+
 				prepareObject(document);
 				if (cloneDocuments) documents[i] = deepClone(documents[i]);
 				if (schemaValidator) await schemaValidator(document);
@@ -102,7 +102,7 @@ class AloeDB<Schema extends Document> {
 			await this.save();
 
 			const result: Document[] = cloneDocuments ? deepClone(documents) : documents;
-			return result as T[];
+			return result as Schema[];
 		} catch (error) {
 			throw new DatabaseError('Error inserting documents', error);
 		}
@@ -113,7 +113,8 @@ class AloeDB<Schema extends Document> {
 	 * @param query Document search query.
 	 * @returns Found document.
 	 */
-	public async findOne<T extends Document = Schema>(query?: SearchQuery<T>): Promise<T | null> {
+	public async findOne<T extends Schema>(query?: SearchQuery<T>): Promise<T | null>;
+	public async findOne(query?: SearchQuery<Schema>): Promise<Schema | null> {
 		const { cloneDocuments } = this.config;
 
 		if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
@@ -122,7 +123,7 @@ class AloeDB<Schema extends Document> {
 		if (found.length === 0) return null;
 
 		const result: Document = cloneDocuments ? deepClone(found[0]) : found[0];
-		return result as T;
+		return result as Schema;
 	}
 
 	/**
@@ -130,7 +131,8 @@ class AloeDB<Schema extends Document> {
 	 * @param query Documents search query.
 	 * @returns Found documents.
 	 */
-	public async findMany<T extends Document = Schema>(query?: SearchQuery<T>): Promise<T[]> {
+	public async findMany<T extends Schema>(query?: SearchQuery<T>): Promise<T[]>;
+	public async findMany(query?: SearchQuery<Schema>): Promise<Schema[]> {
 		const { cloneDocuments } = this.config;
 
 		if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
@@ -138,7 +140,7 @@ class AloeDB<Schema extends Document> {
 		const found: Document[] = Search.documents(query, this.documents);
 		const result: Document[] = cloneDocuments ? deepClone(found) : found;
 
-		return result as T[];
+		return result as Schema[];
 	}
 
 	/**
@@ -146,7 +148,8 @@ class AloeDB<Schema extends Document> {
 	 * @param query Documents search query.
 	 * @returns Documents count.
 	 */
-	public async count<T extends Document = Schema>(query?: SearchQuery<T>): Promise<number> {
+	public async count<T extends Schema>(query?: SearchQuery<T>): Promise<number>;
+	public async count(query?: SearchQuery<Schema>): Promise<number> {
 		try {
 			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
 
@@ -163,7 +166,8 @@ class AloeDB<Schema extends Document> {
 	 * @param searchQuery
 	 * @param updateQuery
 	 */
-	public async updateOne<T extends Document = Schema>(searchQuery: SearchQuery<T>, updateQuery: Document): Promise<T | null> {
+	public async updateOne<T extends Schema>(searchQuery: SearchQuery<T>, updateQuery: Document): Promise<T | null>;
+	public async updateOne(searchQuery: SearchQuery<Schema>, updateQuery: Document): Promise<Schema | null> {
 		try {
 			const { cloneDocuments, schemaValidator } = this.config;
 
@@ -174,62 +178,77 @@ class AloeDB<Schema extends Document> {
 			if (found.length === 0) return null;
 
 			const index: number = found[0];
-			const document: Document = deepClone(this.documents[index]);
+			const document: Schema = deepClone(this.documents[index]);
 			if (cloneDocuments) updateQuery = deepClone(updateQuery);
 
-			for(const key in updateQuery) {
+			for (const key in updateQuery) {
 				const queryValue: DocumentValue = updateQuery[key];
 				setNestedValue(key, queryValue, document);
 			}
 
 			prepareObject(document);
 			if (schemaValidator) await schemaValidator(document);
-			
+
 			this.documents[index] = document;
-			await this.save()
-			
-			const result: Document = cloneDocuments ? deepClone(document) : document;
-			return result as T;
+			await this.save();
+
+			const result: Schema = cloneDocuments ? deepClone(document) : document;
+			return result;
 		} catch (error) {
 			throw new DatabaseError('Error updating document', error);
 		}
 	}
 
-	public async updateMany<T extends Document = Schema>(searchQuery: SearchQuery<T>, updateQuery: Document) {
+	public async updateMany<T extends Schema>(searchQuery: SearchQuery<T>, updateQuery: Document): Promise<Schema[]>;
+	public async updateMany(searchQuery: SearchQuery<Schema>, updateQuery: Document): Promise<Schema[]> {
 		try {
 			const { cloneDocuments, schemaValidator } = this.config;
 
+			if (!isUndefined(searchQuery) && !isObject(searchQuery)) throw new TypeError('Search query must be an object');
+			if (!isObject(updateQuery)) throw new TypeError('Update query must be an object');
+
 			const found: number[] = Search.indexes(searchQuery, this.documents);
-			if (found.length === 0) return;
+			if (found.length === 0) return [];
+
+			const updated: Schema[] = [];
+			if (cloneDocuments) updateQuery = deepClone(updateQuery);
 
 			for (let i = 0; i < found.length; i++) {
 				const index: number = found[i];
-				const document: Document = deepClone(this.documents[index]);
-	
-				for(const key in updateQuery) {
-					const queryValue = updateQuery[key];
+				const document: Schema = deepClone(this.documents[index]);
+
+				for (const key in updateQuery) {
+					const queryValue: DocumentValue = updateQuery[key];
 					setNestedValue(key, queryValue, document);
 				}
-			}
 
+				prepareObject(document);
+				if (schemaValidator) await schemaValidator(document);	
+				
+				this.documents[index] = document;
+				updated.push(document);
+			}
+			
 			await this.save();
 
-			// const result: Document[] = cloneDocuments ? deepClone(found) : found;
-			// return result as T[];
+			const result: Schema[] = cloneDocuments ? deepClone(updated) : updated;
+			return result;
+
 		} catch (error) {
 			throw new DatabaseError('Error updating documents', error);
 		}
 	}
 
-	public async deleteOne<SearchSchema extends Schema>(query?: SearchQuery<SearchSchema>) {
+	public async deleteOne<T extends Schema>(query?: SearchQuery<T>): Promise<Schema | null>;
+	public async deleteOne(query?: SearchQuery<Schema>): Promise<Schema | null> {
 		try {
 			const { cloneDocuments } = this.config;
 
 			const found: number[] = Search.indexes(query, this.documents);
-			if (found.length === 0) return;
+			if (found.length === 0) return null;
 
 			const index: number = found[0];
-			const document: Document = this.documents[index];
+			const document: Schema = this.documents[index];
 
 			this.documents.splice(index, 1);
 			await this.save();
@@ -240,30 +259,32 @@ class AloeDB<Schema extends Document> {
 		}
 	}
 
-	public async deleteMany<SearchSchema extends Document>(query?: SearchQuery<SearchSchema>) {
+	public async deleteMany<T extends Schema>(query?: SearchQuery<T>): Promise<T[]>;
+	public async deleteMany(query?: SearchQuery<Schema>): Promise<Schema[]> {
 		try {
 			const found: number[] = Search.indexes(query, this.documents);
-			if (found.length === 0) return;
-			
-			const deleted: Document[] = [];
+			if (found.length === 0) return [];
+
+			const deleted: Schema[] = [];
 			for (let i = 0; i < found.length; i++) {
 				const index: number = found[i];
 				deleted.push(this.documents[index]);
-				delete this.documents[index];		
+				delete this.documents[index];
 			}
 
-			this.documents = this.documents.filter((document) => !isUndefined(document));
+			this.documents = this.documents.filter(document => !isUndefined(document));
 			await this.save();
 
 			return deleted;
+			
 		} catch (error) {
 			throw new DatabaseError('Error deleting documents', error);
 		}
 	}
 
-	public select<T extends Schema>(query: SearchQuery<T>): Cursor<Schema>;
-	public select<T extends Document>(query: SearchQuery<T>): Cursor<Document> {
-		return new Cursor(query, this.documents, this.config);
+	public select<T extends Schema>(query: SearchQuery<T>): Cursor<T>;
+	public select(query: SearchQuery<Schema>): Cursor<Schema> {
+		return new Cursor<Schema>(query, this.documents, this.config);
 	}
 
 	/**
@@ -290,34 +311,31 @@ class AloeDB<Schema extends Document> {
 export default AloeDB;
 
 interface Test extends Document {
-	test: boolean;
+	value?: number | string;
 }
 
-interface Test2 extends Document {
-	test2: boolean;
-}
+const db = new AloeDB();
 
-// TODO: Fix onlyInMemory
-const db = new AloeDB<Test>({ cloneDocuments: false, onlyInMemory: true });
-
-await db.insertOne({ test2: true });
 
 console.time('insert');
 for (let i = 0; i < 100000; i++) {
-	await db.insertOne();
+	await db.insertOne({ });
 }
 console.timeEnd('insert');
 
 console.time('find');
-const x = await db.findMany({ value: type('number') });
+const x = await db.findMany({ });
 console.timeEnd('find');
+console.log('find', x.length);
 
 console.time('update');
-const y = await db.updateMany({ value: type('number') }, { value: 'x' });
+const y = await db.updateMany({ }, { value: 'y' });
 console.timeEnd('update');
+console.log('update', y.length);
 
 console.time('delete');
 const z = await db.deleteMany({ value: 'x' });
 console.timeEnd('delete');
+console.log('delete', z.length);
 
-console.log(db.documents.length)
+console.log('documents', db.documents.length);
