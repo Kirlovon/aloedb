@@ -30,22 +30,15 @@ class Storage {
 			const { filePath, onlyInMemory, safeWrite } = this.config;
 			const file = filePath as string;
 
-			// Skip writing if file not specified or only in memory mode enabled
 			if (!filePath || onlyInMemory) return;
-
-			// Skip writing if it is locked
 			if (this.isLocked) {
 				this.toWrite = documents;
 				return;
 			}
 
-			// Lock writing
 			this.isLocked = true;
 
-			// Encode data
 			const encoded = this.encode(documents);
-
-			// Write data to the file
 			if (safeWrite) {
 				const tempFile = file + this.extension;
 				await writeFile(tempFile, encoded);
@@ -54,10 +47,8 @@ class Storage {
 				await writeFile(file, encoded);
 			}
 
-			// Unlock writing
 			this.isLocked = false;
 
-			// Start next writing
 			if (isArray(this.toWrite)) {
 				const toWriteCopy: Document[] = this.toWrite;
 				this.toWrite = null;
@@ -77,24 +68,18 @@ class Storage {
 		try {
 			const { filePath } = this.config;
 
-			// If file is not specified
 			if (isUndefined(filePath)) return [];
-
-			// If files not found
 			if (fileExistsSync(filePath) === false) {
 				ensureFileSync(filePath, this.encode());
 				return [];
 			}
 
-			// Read & Parse database file
 			const fileContent: string = readFileSync(filePath);
 			const parsedFile: DatabaseFile = JSON.parse(fileContent);
 
-			// Validate data from file
 			if (!isNumber(parsedFile?.timestamp)) throw new TypeError('Field "timestamp" must be a number');
 			if (!isArray(parsedFile?.documents)) throw new TypeError('Field "documents" must be an array');
 
-			// Validate documents from file
 			for (let i = 0; i < parsedFile.documents.length; i++) {
 				const document: Document = parsedFile.documents[i];
 				if (!isObject(document)) throw new TypeError('Field "documents" must contain only objects');
@@ -115,15 +100,12 @@ class Storage {
 	private encode(documents: Document[] = []): string {
 		const { pretty } = this.config;
 
-		// Specify data
 		const data: DatabaseFile = {
 			timestamp: Date.now(),
 			documents: documents,
 		};
 
-		// Stringify data
 		const encoded: string = pretty ? JSON.stringify(data, null, '\t') : JSON.stringify(data);
-
 		return encoded;
 	}
 }

@@ -46,15 +46,6 @@ export function isNull(target: any): target is null {
 }
 
 /**
- * Checks whether the value is a symbol
- * @param target Target to check
- * @returns Result of checking
- */
-export function isSymbol(target: any): target is Symbol {
-	return typeof target === 'symbol';
-}
-
-/**
  * Checks whether the value is a function
  * @param target Target to check
  * @returns Result of checking
@@ -79,24 +70,6 @@ export function isArray(target: any): target is any[] {
  */
 export function isObject(target: any): target is UnknownObject {
 	return target !== null && typeof target === 'object' && target.constructor === Object;
-}
-
-/**
- * Checks whether the value is a Map array
- * @param target Target to check
- * @returns Result of checking
- */
-export function isMap(target: any): target is Map<any, any> {
-	return target instanceof Map;
-}
-
-/**
- * Checks whether the value is a Set array
- * @param target Target to check
- * @returns Result of checking
- */
-export function isSet(target: any): target is Set<any> {
-	return target instanceof Set;
 }
 
 /**

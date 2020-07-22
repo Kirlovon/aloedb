@@ -100,7 +100,7 @@ export type DocumentPrimitive = string | number | boolean | null;
 /**
  * Cursor methods.
  */
-export type CursorMethods =
+export type CursorMethod =
 	| { type: 'limit'; number: number }
 	| { type: 'skip'; number: number }
 	| { type: 'sort'; query: number }
