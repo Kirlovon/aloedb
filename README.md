@@ -15,10 +15,10 @@
 
 ## Example
 ```typescript
-import { Database, Document } from "https://deno.land/x/aloedb/mod.ts"
+import { Database } from 'https://deno.land/x/aloedb/mod.ts'
 
-// Structure
-interface Film extends Document {
+// Structure of stored documents
+interface Film {
     title: string;
     year: number;
     film: boolean;

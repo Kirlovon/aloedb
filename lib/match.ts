@@ -1,6 +1,6 @@
 import { deepCompare } from './utils.ts';
-import { Document, DocumentValue, SearchQueryValue } from './declarations.ts';
-import { isString, isNumber, isBoolean, isNull, isArray, isObject, isFunction, isRegExp } from './types.ts';
+import { DocumentValue, SearchQueryValue } from './declarations.ts';
+import { isString, isNumber, isBoolean, isNull, isArray, isObject, isFunction, isRegExp, isUndefined } from './types.ts';
 
 /**
  * Compares the value from the query and from the document.
@@ -9,7 +9,7 @@ import { isString, isNumber, isBoolean, isNull, isArray, isObject, isFunction, i
  * @returns Are the values equal.
  */
 function matchValues(queryValue: SearchQueryValue, documentValue: DocumentValue): boolean {
-	if (isString(queryValue) || isNumber(queryValue) || isBoolean(queryValue) || isNull(queryValue)) {
+	if (isString(queryValue) || isNumber(queryValue) || isBoolean(queryValue) || isNull(queryValue) || isUndefined(queryValue)) {
 		return queryValue === documentValue;
 	}
 

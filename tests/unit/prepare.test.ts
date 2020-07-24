@@ -5,7 +5,6 @@ import {
     prepareArray,
     prepareObject
 } from '../../lib/prepare.ts';
-import { deepCompare } from '../../lib/utils.ts';
 
 Deno.test(`${green('[prepare.ts]')} prepareArray`, () => {
     const a: any = [

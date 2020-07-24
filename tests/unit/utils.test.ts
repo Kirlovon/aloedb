@@ -2,6 +2,7 @@ import { assert, assertEquals, assertNotEquals } from 'https://deno.land/std/tes
 import { green } from 'https://deno.land/std/fmt/colors.ts';
 
 import { 
+    cleanArray,
     isObjectEmpty,
     getObjectLength,
     deepClone,
@@ -9,6 +10,13 @@ import {
     getNestedValue,
     setNestedValue
 } from '../../lib/utils.ts';
+
+Deno.test(`${green('[utils.ts]')} cleanArray`, () => {
+    const array = [1, 2, 3, 4, , 6, undefined, null];
+    delete array[5];
+    
+    assertEquals(cleanArray(array), [1, 2, 3, 4, undefined, null]);
+});
 
 Deno.test(`${green('[utils.ts]')} isObjectEmpty`, () => {
     assertEquals(isObjectEmpty({}), true);
@@ -134,7 +142,6 @@ Deno.test(`${green('[utils.ts]')} deepCompare ( Objects & Arrays )`, () => {
     }), false);
 });
 
-
 Deno.test(`${green('[utils.ts]')} getNestedValue`, () => {
     const object: any = {
         a: 1,
@@ -165,4 +172,42 @@ Deno.test(`${green('[utils.ts]')} getNestedValue`, () => {
     assertEquals(f, undefined);
     assertEquals(g, undefined);
     assertEquals(h, undefined);
+});
+
+Deno.test(`${green('[utils.ts]')} setNestedValue`, () => {
+    const object: any = {
+        a: 1,
+        b: 'text',
+        c: true,
+        d: undefined,
+        e: null,
+        f: { test: null, value: undefined, x: [1, 2, 3], z: { test: 'text' }},
+        g: [1, true, 'text', null, undefined, { test: 1 }, [1, 2, 3]],
+        hh: [1, 2, 3]
+    }
+
+    setNestedValue('d', 300, object);
+    setNestedValue('f.test', true, object);
+    setNestedValue('f.z.test', 'other', object);
+    setNestedValue('g.0', 666, object);
+    setNestedValue('g.6.2', { test: true }, object);
+
+    assertEquals(object.d, 300);
+    assertEquals(object.f.test, true);
+    assertEquals(object.f.z.test, 'other');
+    assertEquals(object.g[0], 666);
+    assertEquals(object.g[6][2], { test: true });
+
+    setNestedValue('d.test.0.0', 0, object);
+    setNestedValue('a.b.c', { test: false }, object);
+    setNestedValue('x.y.0', [1, 2, 3], object);
+    setNestedValue('g.z.0.2', { x: [0, 0, 0] }, object);
+    setNestedValue('g.0.0.2', 'test', object);
+    setNestedValue('hh.10.z', [1, 2, 3], object);
+
+    assertEquals(object.d.test[0][0], 0);
+    assertEquals(object.a.b.c, { test: false });
+    assertEquals(object.x.y[0], [1, 2, 3]);
+    assertEquals(object.g.z[0][2], { x: [0, 0, 0] });
+    assertEquals(object.g[0][0][2], 'test');
 });

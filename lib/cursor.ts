@@ -1,33 +1,33 @@
 import Search from './search.ts';
-import { SearchQuery, Document, CursorMethod, DatabaseConfig } from './declarations.ts';
+import { SearchQuery, CursorMethod, DatabaseConfig } from './declarations.ts';
 
 // TODO
-class Cursor<Schema extends Document = Document> {
+class Cursor<Schema> {
 	
 	/** Main search query. */
-	private query: SearchQuery = {};
+	private query: SearchQuery<Schema> = {};
 
 	/** Database configuration. */
 	private config: DatabaseConfig;
 
 	/** Documents storage. */
-	private documents: Document[] = [];
+	private documents: Schema[] = [];
 
 	/** Methods to execute. */
 	private methods: CursorMethod[] = [];
 
-	constructor(query: SearchQuery, documents: Document[], config: DatabaseConfig) {
+	constructor(query: SearchQuery<Schema>, documents: Schema[], config: DatabaseConfig) {
 		this.query = query;
 		this.config = config;
 		this.documents = [...documents];
 	}
 
-	public async getOne(): Promise<Document | null> {
+	public async getOne(): Promise<Schema | null> {
 		const found = await this.execute();
 		return found.length > 0 ? found[0] : null;
 	}
 
-	public async getMany(): Promise<Document[]> {
+	public async getMany(): Promise<Schema[]> {
 		const found = await this.execute();
 		return found;
 	}
@@ -62,10 +62,10 @@ class Cursor<Schema extends Document = Document> {
 		return this;
 	}
 
-	private async execute(): Promise<Document[]> {
+	private async execute(): Promise<Schema[]> {
 		const { query, methods, documents } = this;
 
-		let found: Document[] = Search.documents(query, documents);
+		let found: any[] = Search<Schema>(query, documents);
 
 		for (let i = 0; i < methods.length; i++) {
 			const method: CursorMethod = methods[i];

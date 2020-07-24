@@ -1,5 +1,14 @@
-import { isArray, isObject } from './types.ts';
-import { UnknownObject } from './declarations.ts';
+import { isArray, isObject, isUndefined } from './types.ts';
+import { UnknownObject, Document } from './declarations.ts';
+
+/**
+ * Remove all empty items from the array.
+ * @param target Array to clean.
+ * @returns Clean array.
+ */
+export function cleanArray<T extends any[]>(target: T): T {
+	return target.filter(() => true) as T;
+}
 
 /**
  * Checks if the object is empty.
@@ -131,9 +140,14 @@ export function setNestedValue(query: string, value: any, object: UnknownObject)
 	for (let i = 0; i < length; i++) {
 		const part = parts[i];
 		const nested = property[part];
+		const nextPart = parts[i+1];
 
-		if (!isArray(nested) && !isObject(nested)) {
-			property[part] = isNaN(part as any) ? {} : [];
+		if (isArray(nested)) {
+			if (isNaN(nextPart as any)) property[part] = {};
+		} else {
+			if (!isArray(nested) && !isObject(nested)) {
+				property[part] = {};
+			}
 		}
 
 		property = property[part];

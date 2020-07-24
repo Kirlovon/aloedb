@@ -26,7 +26,7 @@ export interface DatabaseConfig {
 
 	/**
 	 * Automatically clone all documents inserted or returned by the database.
-	 * This slows down operations with the database a bit, but allows you to modify the returned documents.
+	 * Allows you to modify the returned documents.
 	 */
 	cloneDocuments: boolean;
 
@@ -50,7 +50,7 @@ export interface DatabaseFile {
 }
 
 /**
- * Document-like object.
+ * Any document-like object.
  */
 export interface Document {
 	[key: string]: DocumentValue;
@@ -64,14 +64,24 @@ export interface UnknownObject {
 }
 
 /**
- * Manual schema validation.
+ * 
  */
-export type SchemaValidator = (document: Document) => void | Promise<void>;
+export type Acceptable<T> = { [K in keyof T]: T[K] & DocumentValue };
+
+/**
+ * Supported primitives.
+ */
+export type DocumentPrimitive = string | number | boolean | null;
+
+/**
+ * Supported documents DocumentValues.
+ */
+export type DocumentValue = DocumentPrimitive | DocumentPrimitive[] | Document | Document[] | undefined;
 
 /**
  * Search query.
  */
-export type SearchQuery<T extends Document = Document> = Partial<{ [K in keyof T]: T[K] | SearchFunction | RegExp }>;
+export type SearchQuery<T> = { [K in keyof T]?: T[K] | SearchFunction | RegExp };
 
 /**
  * Search query value.
@@ -81,21 +91,22 @@ export type SearchQueryValue = DocumentValue | SearchFunction | RegExp;
 /**
  * Search function for search queries.
  */
-export type SearchFunction = (value: DocumentValue) => boolean;
+export type SearchFunction = (DocumentValue: DocumentValue) => boolean;
+
+/**
+ * Update query.
+ */
+export type UpdateQuery<T> = { [K in keyof T]?: T[K] } | ((document: T) => void);
 
 /**
  * Sorting function.
  */
 export type SortFunction = (a: DocumentValue, b: DocumentValue) => number;
 
-export type UpdateQuery = Document | UpdateFunction;
-
-export type UpdateFunction = (document: Document) => void;
-
 /**
- * Supported primitives.
+ * Manual schema validation.
  */
-export type DocumentPrimitive = string | number | boolean | null;
+export type SchemaValidator = (document: Document) => void | Promise<void>;
 
 /**
  * Cursor methods.
@@ -106,8 +117,4 @@ export type CursorMethod =
 	| { type: 'sort'; query: number }
 	| { type: 'filter'; query: number }
 	| { type: 'reverse' };
-
-/**
- * Supported documents values.
- */
-export type DocumentValue = DocumentPrimitive | DocumentPrimitive[] | Document | Document[] | undefined;
+	
