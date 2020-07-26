@@ -1,10 +1,10 @@
 import DatabaseError from './error.ts';
-import { prepareObject } from './prepare.ts';
+import { prepareObject } from './utils.ts';
 import { isUndefined, isArray, isNumber, isObject } from './types.ts';
 import { DatabaseConfig, DatabaseFile, Document } from './declarations.ts';
 import { writeFile, readFileSync, ensureFileSync, renameFile, fileExistsSync } from './files.ts';
 
-class Storage {
+export class Storage {
 	/** Database configuration. */
 	private config: DatabaseConfig;
 
@@ -28,7 +28,7 @@ class Storage {
 	public async write(documents: Document[]): Promise<void> {
 		try {
 			const { filePath, onlyInMemory, safeWrite } = this.config;
-			const file = filePath as string;
+			const file: string = filePath as string;
 
 			if (!filePath || onlyInMemory) return;
 			if (this.isLocked) {
@@ -37,8 +37,8 @@ class Storage {
 			}
 
 			this.isLocked = true;
+			const encoded: string = this.encode(documents);
 
-			const encoded = this.encode(documents);
 			if (safeWrite) {
 				const tempFile = file + this.extension;
 				await writeFile(tempFile, encoded);
@@ -75,6 +75,8 @@ class Storage {
 			}
 
 			const fileContent: string = readFileSync(filePath);
+			if (fileContent.trim() === '') return [];
+
 			const parsedFile: DatabaseFile = JSON.parse(fileContent);
 
 			if (!isNumber(parsedFile?.timestamp)) throw new TypeError('Field "timestamp" must be a number');

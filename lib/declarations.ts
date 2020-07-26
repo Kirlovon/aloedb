@@ -25,12 +25,6 @@ export interface DatabaseConfig {
 	onlyInMemory: boolean;
 
 	/**
-	 * Automatically clone all documents inserted or returned by the database.
-	 * Allows you to modify the returned documents.
-	 */
-	cloneDocuments: boolean;
-
-	/**
 	 * Manual document validation function.
 	 * If the document does not pass the validation, just throw the error.
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
@@ -64,9 +58,34 @@ export interface UnknownObject {
 }
 
 /**
- * 
+ *
  */
 export type Acceptable<T> = { [K in keyof T]: T[K] & DocumentValue };
+
+/**
+ * Search query.
+ */
+export type SearchQuery<T> = { [K in keyof T]?: T[K] | SearchFunction | RegExp } & { [key: string]: DocumentValue | SearchFunction | RegExp };
+
+/**
+ * Update query.
+ */
+export type UpdateQuery<T> = ({ [K in keyof T]?: T[K] & DocumentValue } & { [key: string]: DocumentValue }) | ((document: T) => void);
+
+/**
+ * Sorting function.
+ */
+export type SortFunction = (a: Readonly<DocumentValue>, b: Readonly<DocumentValue>) => number;
+
+/**
+ * Search function for search queries.
+ */
+export type SearchFunction = (DocumentValue: DocumentValue) => boolean;
+
+/**
+ * Manual schema validation.
+ */
+export type SchemaValidator = (document: Readonly<Document>) => void;
 
 /**
  * Supported primitives.
@@ -79,34 +98,9 @@ export type DocumentPrimitive = string | number | boolean | null;
 export type DocumentValue = DocumentPrimitive | DocumentPrimitive[] | Document | Document[] | undefined;
 
 /**
- * Search query.
- */
-export type SearchQuery<T> = { [K in keyof T]?: T[K] | SearchFunction | RegExp };
-
-/**
  * Search query value.
  */
-export type SearchQueryValue = DocumentValue | SearchFunction | RegExp;
-
-/**
- * Search function for search queries.
- */
-export type SearchFunction = (DocumentValue: DocumentValue) => boolean;
-
-/**
- * Update query.
- */
-export type UpdateQuery<T> = { [K in keyof T]?: T[K] } | ((document: T) => void);
-
-/**
- * Sorting function.
- */
-export type SortFunction = (a: DocumentValue, b: DocumentValue) => number;
-
-/**
- * Manual schema validation.
- */
-export type SchemaValidator = (document: Document) => void | Promise<void>;
+export type SearchQueryValue = DocumentValue | SearchFunction | RegExp | undefined;
 
 /**
  * Cursor methods.
@@ -117,4 +111,3 @@ export type CursorMethod =
 	| { type: 'sort'; query: number }
 	| { type: 'filter'; query: number }
 	| { type: 'reverse' };
-	

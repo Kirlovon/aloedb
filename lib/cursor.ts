@@ -1,9 +1,8 @@
-import Search from './search.ts';
-import { SearchQuery, CursorMethod, DatabaseConfig } from './declarations.ts';
+import { Search } from './search.ts';
+import { SearchQuery, CursorMethod, DatabaseConfig, Acceptable } from './declarations.ts';
 
 // TODO
-class Cursor<Schema> {
-	
+export class Cursor<Schema extends Acceptable<Schema>> {
 	/** Main search query. */
 	private query: SearchQuery<Schema> = {};
 
@@ -76,11 +75,8 @@ class Cursor<Schema> {
 			} else if (type === 'limit') {
 				// found.slice(method.number)
 			}
-			
 		}
 
 		return found;
 	}
 }
-
-export default Cursor;

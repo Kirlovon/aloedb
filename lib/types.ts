@@ -5,7 +5,7 @@ import { UnknownObject } from './declarations.ts';
  * @param target Target to check
  * @returns Result of checking
  */
-export function isString(target: any): target is string {
+export function isString(target: unknown): target is string {
 	return typeof target === 'string';
 }
 
@@ -14,7 +14,7 @@ export function isString(target: any): target is string {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isNumber(target: any): target is number {
+export function isNumber(target: unknown): target is number {
 	return typeof target === 'number' && !Number.isNaN(target);
 }
 
@@ -23,7 +23,7 @@ export function isNumber(target: any): target is number {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isBoolean(target: any): target is boolean {
+export function isBoolean(target: unknown): target is boolean {
 	return typeof target === 'boolean';
 }
 
@@ -32,7 +32,7 @@ export function isBoolean(target: any): target is boolean {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isUndefined(target: any): target is undefined {
+export function isUndefined(target: unknown): target is undefined {
 	return typeof target === 'undefined';
 }
 
@@ -41,7 +41,7 @@ export function isUndefined(target: any): target is undefined {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isNull(target: any): target is null {
+export function isNull(target: unknown): target is null {
 	return target === null;
 }
 
@@ -50,7 +50,7 @@ export function isNull(target: any): target is null {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isFunction(target: any): target is (...args: any[]) => any {
+export function isFunction(target: unknown): target is (...args: any) => any {
 	return typeof target === 'function';
 }
 
@@ -59,7 +59,7 @@ export function isFunction(target: any): target is (...args: any[]) => any {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isArray(target: any): target is any[] {
+export function isArray(target: unknown): target is any[] {
 	return target instanceof Array;
 }
 
@@ -68,8 +68,8 @@ export function isArray(target: any): target is any[] {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isObject(target: any): target is UnknownObject {
-	return target !== null && typeof target === 'object' && target.constructor === Object;
+export function isObject(target: unknown): target is UnknownObject {
+	return target !== null && typeof target === 'object' && target?.constructor === Object;
 }
 
 /**
@@ -77,7 +77,7 @@ export function isObject(target: any): target is UnknownObject {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isRegExp(target: any): target is RegExp {
+export function isRegExp(target: unknown): target is RegExp {
 	return target instanceof RegExp;
 }
 
@@ -86,7 +86,7 @@ export function isRegExp(target: any): target is RegExp {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isDate(target: any): target is Date {
+export function isDate(target: unknown): target is Date {
 	return target instanceof Date;
 }
 
@@ -95,6 +95,6 @@ export function isDate(target: any): target is Date {
  * @param target Target to check
  * @returns Result of checking
  */
-export function isError(target: any): target is Error {
+export function isError(target: unknown): target is Error {
 	return target instanceof Error;
 }

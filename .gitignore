@@ -2,6 +2,9 @@
 .idea/
 .vscode/
 
+# Enviroment files for testing
+enviroment/
+
 # Scripts
 *.bat
 *.cmd

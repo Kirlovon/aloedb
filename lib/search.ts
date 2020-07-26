@@ -1,7 +1,6 @@
-import matchValues from './match.ts';
 import { isUndefined } from './types.ts';
-import { cleanArray, getNestedValue, isObjectEmpty } from './utils.ts';
-import { SearchQuery, SearchQueryValue, DocumentValue } from './declarations.ts';
+import { cleanArray, getNestedValue, isObjectEmpty, matchValues } from './utils.ts';
+import { SearchQuery, SearchQueryValue, DocumentValue, Acceptable } from './declarations.ts';
 
 /**
  * Find documents positions.
@@ -9,7 +8,7 @@ import { SearchQuery, SearchQueryValue, DocumentValue } from './declarations.ts'
  * @param documents An array of positions of suitable documents.
  * @returns Found positions.
  */
-function Search<T>(query: SearchQuery<T> | undefined, documents: T[]): number[] {
+export function Search<T extends Acceptable<T>>(query: SearchQuery<T> | undefined, documents: T[]): number[] {
 	let found: number[] = [];
 	let firstSearch: boolean = true;
 
@@ -25,7 +24,7 @@ function Search<T>(query: SearchQuery<T> | undefined, documents: T[]): number[] 
 
 			for (let i = 0; i < documents.length; i++) {
 				const document: T = documents[i];
-				const documentValue: DocumentValue = isNested ? getNestedValue(key, document) : document[key];
+				const documentValue: DocumentValue = isNested ? getNestedValue(key, document) : document[key as keyof T];
 
 				const isMatched: boolean = matchValues(queryValue, documentValue);
 				if (isMatched) found.push(i);
@@ -40,8 +39,8 @@ function Search<T>(query: SearchQuery<T> | undefined, documents: T[]): number[] 
 
 			const position: number = found[i];
 			const document: T = documents[position];
-			const documentValue: DocumentValue = isNested ? getNestedValue(key, document) : document[key];
-			
+			const documentValue: DocumentValue = isNested ? getNestedValue(key, document) : document[key as keyof T];
+
 			const isMatched: boolean = matchValues(queryValue, documentValue);
 			if (isMatched) continue;
 			delete found[i];
@@ -50,5 +49,3 @@ function Search<T>(query: SearchQuery<T> | undefined, documents: T[]): number[] 
 
 	return cleanArray(found);
 }
-
-export default Search;

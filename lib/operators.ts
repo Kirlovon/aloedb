@@ -1,7 +1,6 @@
-import matchValues from './match.ts';
+import { deepCompare, matchValues } from './utils.ts';
 import { isArray, isUndefined, isString, isNumber, isBoolean, isNull, isObject } from './types.ts';
 import { DocumentValue, DocumentPrimitive, SearchFunction, SearchQueryValue } from './declarations.ts';
-import { deepCompare } from './utils.ts';
 
 export function equal(value: DocumentValue): SearchFunction {
 	return (target: DocumentValue) => deepCompare(target, value);
@@ -48,15 +47,22 @@ export function exists(): SearchFunction {
 }
 
 export function type(value: 'string' | 'number' | 'boolean' | 'null' | 'array' | 'object'): SearchFunction {
-	return (target: DocumentValue) => { 
+	return (target: DocumentValue) => {
 		switch (value) {
-			case 'string': return isString(target);
-			case 'number': return isNumber(target);
-			case 'boolean': return isBoolean(target);
-			case 'null': return isNull(target);
-			case 'array': return isArray(target);
-			case 'object': return isObject(target);
-			default: return false;
+			case 'string':
+				return isString(target);
+			case 'number':
+				return isNumber(target);
+			case 'boolean':
+				return isBoolean(target);
+			case 'null':
+				return isNull(target);
+			case 'array':
+				return isArray(target);
+			case 'object':
+				return isObject(target);
+			default:
+				return false;
 		}
 	};
 }
@@ -69,10 +75,9 @@ export function length(value: number): SearchFunction {
 	return (target: DocumentValue) => isArray(target) && target.length === value;
 }
 
-// TODO
-// export function elementsMatch(...values: SearchQueryValue[]): SearchFunction {
-// 	return (target: DocumentValue) => isArray(target) && target.every((value: any) => matchValues(value, target));
-// }
+export function elementMatch(...values: SearchQueryValue[]): SearchFunction {
+	return (target: DocumentValue) => isArray(target) && target.some((targetValue: DocumentValue) => values.every((value: SearchQueryValue) => matchValues(value, targetValue)));
+}
 
 export function not(value: SearchQueryValue): SearchFunction {
 	return (target: DocumentValue) => matchValues(value, target) === false;
