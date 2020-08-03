@@ -7,11 +7,9 @@ import {
 	getObjectLength,
 	deepClone,
 	deepCompare,
-	getNestedValue,
-	setNestedValue,
 	prepareArray,
 	prepareObject,
-	updateDocument,
+	updateObject,
 	matchValues,
 } from '../../lib/utils.ts';
 
@@ -149,76 +147,6 @@ Deno.test(`${green('[utils.ts]')} deepCompare ( Objects & Arrays )`, () => {
 	);
 });
 
-Deno.test(`${green('[utils.ts]')} getNestedValue`, () => {
-	const object: any = {
-		a: 1,
-		b: 'text',
-		c: true,
-		d: undefined,
-		e: null,
-		f: { test: null, value: undefined, x: [1, 2, 3], z: { test: 'text' } },
-		g: [1, true, 'text', null, undefined, { test: 1 }, [1, 2, 3]],
-	};
-
-	const a = getNestedValue('d', object);
-	const b = getNestedValue('f.test', object);
-	const c = getNestedValue('f.z.test', object);
-	const d = getNestedValue('g.0', object);
-	const e = getNestedValue('g.6.2', object);
-
-	const f = getNestedValue('x', object);
-	const g = getNestedValue('f.0', object);
-	const h = getNestedValue('g.6.99', object);
-
-	assertEquals(a, undefined);
-	assertEquals(b, null);
-	assertEquals(c, 'text');
-	assertEquals(d, 1);
-	assertEquals(e, 3);
-
-	assertEquals(f, undefined);
-	assertEquals(g, undefined);
-	assertEquals(h, undefined);
-});
-
-Deno.test(`${green('[utils.ts]')} setNestedValue`, () => {
-	const object: any = {
-		a: 1,
-		b: 'text',
-		c: true,
-		d: undefined,
-		e: null,
-		f: { test: null, value: undefined, x: [1, 2, 3], z: { test: 'text' } },
-		g: [1, true, 'text', null, undefined, { test: 1 }, [1, 2, 3]],
-		hh: [1, 2, 3],
-	};
-
-	setNestedValue('d', 300, object);
-	setNestedValue('f.test', true, object);
-	setNestedValue('f.z.test', 'other', object);
-	setNestedValue('g.0', 666, object);
-	setNestedValue('g.6.2', { test: true }, object);
-
-	assertEquals(object.d, 300);
-	assertEquals(object.f.test, true);
-	assertEquals(object.f.z.test, 'other');
-	assertEquals(object.g[0], 666);
-	assertEquals(object.g[6][2], { test: true });
-
-	setNestedValue('d.test.0.0', 0, object);
-	setNestedValue('a.b.c', { test: false }, object);
-	setNestedValue('x.y.0', [1, 2, 3], object);
-	setNestedValue('g.z.0.2', { x: [0, 0, 0] }, object);
-	setNestedValue('g.0.0.2', 'test', object);
-	setNestedValue('hh.10.1', [1, 2, 3], object);
-
-	assertEquals(object.d.test[0][0], 0);
-	assertEquals(object.a.b.c, { test: false });
-	assertEquals(object.x.y[0], [1, 2, 3]);
-	assertEquals(object.g.z[0][2], { x: [0, 0, 0] });
-	assertEquals(object.g[0][0][2], 'test');
-});
-
 Deno.test(`${green('[utils.ts]')} prepareArray`, () => {
 	const a: any = [1, 'text', true, undefined, null, { test: null, test2: undefined, test3: [1, 2, 3] }, [null, undefined, { test: undefined }]];
 
@@ -289,23 +217,27 @@ Deno.test(`${green('[utils.ts]')} matchValues`, () => {
 	assertEquals(matchValues({ test: new Map() as any }, { test: [] }), false);
 });
 
-Deno.test(`${green('[utils.ts]')} updateDocument`, () => {
+Deno.test(`${green('[utils.ts]')} updateObject`, () => {
 	const object: any = { test: '123' };
 
-	updateDocument({ value: true }, object);
+	updateObject({ value: true }, object);
 	assertEquals(object, { test: '123', value: true });
 
-	updateDocument({ 'value.test': [] }, object);
+	updateObject({ value: { test: [] } }, object);
 	assertEquals(object, { test: '123', value: { test: [] } });
 
-	updateDocument({ 'value.test.0': true }, object);
+	updateObject({ value: { test: [true] } }, object);
 	assertEquals(object, { test: '123', value: { test: [true] } });
 
-	updateDocument({ value: undefined }, object);
+	updateObject({ value: undefined }, object);
 	assertEquals(object, { test: '123', value: undefined });
 
-	updateDocument(document => {
+	updateObject(document => {
 		document.value = 3;
+		return document;
 	}, object);
+	assertEquals(object, { test: '123', value: 3 });
+
+	updateObject({ value: x => { return [1, 2, 3, x ]} }, object);
 	assertEquals(object, { test: '123', value: 3 });
 });

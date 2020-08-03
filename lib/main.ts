@@ -3,15 +3,19 @@ import { Cursor } from './cursor.ts';
 import { Storage } from './storage.ts';
 import { DatabaseError } from './error.ts';
 import { isUndefined, isString, isBoolean, isObject, isArray, isFunction } from './types.ts';
-import { deepClone, cleanArray, isObjectEmpty, updateDocument, prepareObject } from './utils.ts';
-import { Document, Acceptable, DatabaseConfig, SearchQuery, UpdateQuery } from './declarations.ts';
+import { deepClone, cleanArray, isObjectEmpty, updateObject, prepareObject } from './utils.ts';
+import { Document, Acceptable, DatabaseConfig, SearchQuery, UpdateQuery, DocumentValue, UpdateQueryValue } from './declarations.ts';
 
 /**
  * # AloeDB 🌿
  * Light, Embeddable, NoSQL database for Deno
  */
 class AloeDB<Schema extends Acceptable<Schema> = Document> {
-	/** In-Memory documents storage. */
+	/** 
+	 * In-Memory documents storage.
+	 * 
+	 * ___WARNING: It is better not to modify these documents manually, as the changes will not pass the necessary checks.___
+	 */
 	public documents: Schema[] = [];
 
 	/** File storage manager. */
@@ -59,7 +63,7 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 	}
 
 	/**
-	 * Insert new document.
+	 * Insert a document.
 	 * @param document Document to insert.
 	 * @returns Inserted document.
 	 */
@@ -69,44 +73,41 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 			if (!isObject(document)) throw new TypeError('Input must be an object');
 
 			prepareObject(document);
-			document = deepClone(document);
 			if (schemaValidator) schemaValidator(document);
+			
+			const documentClone: Schema = deepClone(document);
+			this.documents.push(documentClone);
 
-			this.documents.push(document);
 			await this.save();
-
-			return deepClone(document);
+			return document;
 		} catch (error) {
 			throw new DatabaseError('Error inserting document', error);
 		}
 	}
 
 	/**
-	 * Insert many documents at once.
+	 * Inserts multiple documents.
 	 * @param documents Array of documents to insert.
 	 * @returns Array of inserted documents.
 	 */
 	public async insertMany(documents: Schema[]): Promise<Schema[]> {
 		try {
 			const { schemaValidator } = this.config;
-			const inserted: Schema[] = [];
-
 			if (!isArray(documents)) throw new TypeError('Input must be an array');
 
 			for (let i = 0; i < documents.length; i++) {
-				const document: Schema = deepClone(documents[i]);
+				const document: Schema = documents[i];
 				if (!isObject(document)) throw new TypeError('Values must be an objects');
 
 				prepareObject(document);
 				if (schemaValidator) schemaValidator(document);
-
-				inserted.push(document);
 			}
 
-			this.documents = [...this.documents, ...inserted];
-			await this.save();
+			const documentsClone: Schema[] = deepClone(documents);
+			this.documents = [...this.documents, ...documentsClone];
 
-			return deepClone(documents);
+			await this.save();
+			return documents;
 		} catch (error) {
 			throw new DatabaseError('Error inserting documents', error);
 		}
@@ -114,12 +115,12 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 
 	/**
 	 * Find document by search query.
-	 * @param query Document search query.
+	 * @param query Document selection criteria.
 	 * @returns Found document.
 	 */
-	public async findOne(query?: SearchQuery<Schema>): Promise<Readonly<Schema> | null> {
+	public async findOne(query?: SearchQuery<Schema>): Promise<Schema | null> {
 		try {
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 			if ((isUndefined(query) || isObjectEmpty(query)) && this.documents.length > 0) return deepClone(this.documents[0]);
 
 			const found: number[] = Search<Schema>(query, this.documents);
@@ -128,7 +129,7 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 			const position: number = found[0];
 			const document: Schema = this.documents[position];
 
-			return document;
+			return deepClone(document);
 		} catch (error) {
 			throw new DatabaseError('Error searching document', error);
 		}
@@ -136,18 +137,18 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 
 	/**
 	 * Find multiple documents by search query.
-	 * @param query Documents search query.
+	 * @param query Documents selection criteria.
 	 * @returns Found documents.
 	 */
 	public async findMany(query?: SearchQuery<Schema>): Promise<Schema[]> {
 		try {
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 			if (isUndefined(query) || isObjectEmpty(query)) return deepClone(this.documents);
 
 			const found: number[] = Search<Schema>(query, this.documents);
 			if (found.length === 0) return [];
-
 			const documents: Schema[] = found.map(position => this.documents[position]);
+
 			return deepClone(documents);
 		} catch (error) {
 			throw new DatabaseError('Error searching document', error);
@@ -156,12 +157,12 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 
 	/**
 	 * Count found documents.
-	 * @param query Documents search query.
+	 * @param query Documents selection criteria.
 	 * @returns Documents count.
 	 */
 	public async count(query?: SearchQuery<Schema>): Promise<number> {
 		try {
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 			if (isUndefined(query) || isObjectEmpty(query)) return this.documents.length;
 
 			const found: number[] = Search<Schema>(query, this.documents);
@@ -171,18 +172,17 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 		}
 	}
 
-
 	/**
-	 * Find and update document.
-	 * @param query Documents search query.
-	 * @param update Update query.
-	 * @returns Updated document.
+	 * Modifies an existing document.
+	 * @param query Document selection criteria.
+	 * @param update The modifications to apply.
+	 * @returns Original document that has been modified.
 	 */
 	public async updateOne(query: SearchQuery<Schema>, update: UpdateQuery<Schema>): Promise<Schema | null> {
 		try {
 			const { schemaValidator } = this.config;
 
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 			if (!isObject(update) && !isFunction(update)) throw new TypeError('Update query must be an object or function');
 
 			const found: number[] = Search<Schema>(query, this.documents);
@@ -190,53 +190,67 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 
 			const position: number = found[0];
 			const document: Schema = this.documents[position];
+			const documentClone: Schema = deepClone(document);
 
-			updateDocument(deepClone(update), document);
-			prepareObject(document);
-			if (schemaValidator) schemaValidator(document);
+			prepareObject(update);
+			const updatedDocument: Schema = updateObject(update, documentClone) as Schema;
+			if (schemaValidator) schemaValidator(updatedDocument);
 
-			this.documents[position] = document;
+			this.documents[position] = deepClone(updatedDocument);
 			await this.save();
 
-			return deepClone(document);
+			return document;
 		} catch (error) {
 			throw new DatabaseError('Error updating document', error);
 		}
 	}
 
+	/**
+	 * Modifies all documents that match search query.
+	 * @param query Documents selection criteria.
+	 * @param update The modifications to apply.
+	 * @returns Original documents that has been modified.
+	 */
 	public async updateMany(query: SearchQuery<Schema>, update: UpdateQuery<Schema>): Promise<Schema[]> {
 		try {
 			const { schemaValidator } = this.config;
 			const updated: Schema[] = [];
 
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 			if (!isObject(update) && !isFunction(update)) throw new TypeError('Update query must be an object');
 
 			const found: number[] = Search<Schema>(query, this.documents);
 			if (found.length === 0) return [];
 
+			prepareObject(update);
+
 			for (let i = 0; i < found.length; i++) {
 				const position: number = found[i];
-				const document: Schema = deepClone(this.documents[position]);
+				const document: Schema = this.documents[position];
+				const documentClone: Schema = deepClone(document);
 
-				updateDocument(update, document);
-				prepareObject(document);
-				if (schemaValidator) schemaValidator(document);
+				const updatedDocument: Schema = updateObject(update, documentClone) as Schema;
+				if (schemaValidator) schemaValidator(updatedDocument);
 
-				this.documents[position] = document;
+				this.documents[position] = deepClone(document);
 				updated.push(document);
-				await this.save();
 			}
-
-			return deepClone(updated);
+			
+			await this.save();
+			return updated;
 		} catch (error) {
 			throw new DatabaseError('Error updating documents', error);
 		}
 	}
 
+	/**
+	 * Delete one document.
+	 * @param query Document selection criteria.
+	 * @returns Deleted document.
+	 */
 	public async deleteOne(query?: SearchQuery<Schema>): Promise<Schema | null> {
 		try {
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 
 			const found: number[] = Search<Schema>(query, this.documents);
 			if (found.length === 0) return null;
@@ -253,9 +267,14 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 		}
 	}
 
+	/**
+	 * Delete many documents.
+	 * @param query Document selection criteria.
+	 * @returns Array of deleted documents.
+	 */
 	public async deleteMany(query?: SearchQuery<Schema>): Promise<Schema[]> {
 		try {
-			if (!isUndefined(query) && !isObject(query)) throw new TypeError('Search query must be an object');
+			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object');
 			const deleted: Schema[] = [];
 
 			const found: number[] = Search<Schema>(query, this.documents);
@@ -278,9 +297,10 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 		}
 	}
 
-	public select(query: SearchQuery<Schema>): Cursor<Schema> {
-		return new Cursor<Schema>(query, this.documents, this.config);
-	}
+	// TODO
+	// public select(query?: SearchQuery<Schema>): Cursor<Schema> {
+	// 	return new Cursor<Schema>(query, this.documents, this.config);
+	// }
 
 	/**
 	 * Delete all documents.

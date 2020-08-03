@@ -1,53 +1,55 @@
 import { deepCompare, matchValues } from './utils.ts';
 import { isArray, isUndefined, isString, isNumber, isBoolean, isNull, isObject } from './types.ts';
-import { DocumentValue, DocumentPrimitive, SearchFunction, SearchQueryValue } from './declarations.ts';
+import { DocumentValue, DocumentPrimitive, SearchFunction, SearchFieldFunction, SearchQueryValue } from './declarations.ts';
 
-export function equal(value: DocumentValue): SearchFunction {
-	return (target: DocumentValue) => deepCompare(target, value);
+// TODO: Comments
+
+export function equal(value: DocumentValue): SearchFieldFunction {
+	return target => deepCompare(target, value);
 }
 
-export function notEqual(value: DocumentValue): SearchFunction {
-	return (target: DocumentValue) => !deepCompare(target, value);
+export function notEqual(value: DocumentValue): SearchFieldFunction {
+	return target => !deepCompare(target, value);
 }
 
-export function inside(values: DocumentPrimitive[]): SearchFunction {
-	return (target: DocumentValue) => values.includes(target as any);
+export function inside(values: DocumentPrimitive[]): SearchFieldFunction {
+	return target => values.includes(target as any);
 }
 
-export function notInside(values: DocumentPrimitive[]): SearchFunction {
-	return (target: DocumentValue) => !values.includes(target as any);
+export function notInside(values: DocumentPrimitive[]): SearchFieldFunction {
+	return target => !values.includes(target as any);
 }
 
-export function moreThan(value: number): SearchFunction {
-	return (target: DocumentValue) => (target as number) > value;
+export function moreThan(value: number): SearchFieldFunction {
+	return target => (target as number) > value;
 }
 
-export function moreThanOrEqual(value: number): SearchFunction {
-	return (target: DocumentValue) => (target as number) >= value;
+export function moreThanOrEqual(value: number): SearchFieldFunction {
+	return target => (target as number) >= value;
 }
 
-export function lessThan(value: number): SearchFunction {
-	return (target: DocumentValue) => (target as number) < value;
+export function lessThan(value: number): SearchFieldFunction {
+	return target => (target as number) < value;
 }
 
-export function lessThanOrEqual(value: number): SearchFunction {
-	return (target: DocumentValue) => (target as number) <= value;
+export function lessThanOrEqual(value: number): SearchFieldFunction {
+	return target => (target as number) <= value;
 }
 
-export function between(min: number, max: number): SearchFunction {
-	return (target: DocumentValue) => (target as number) > min && (target as number) < max;
+export function between(min: number, max: number): SearchFieldFunction {
+	return target => (target as number) > min && (target as number) < max;
 }
 
-export function betweenOrEqual(min: number, max: number): SearchFunction {
-	return (target: DocumentValue) => (target as number) >= min && (target as number) <= max;
+export function betweenOrEqual(min: number, max: number): SearchFieldFunction {
+	return target => (target as number) >= min && (target as number) <= max;
 }
 
-export function exists(): SearchFunction {
-	return (target: DocumentValue) => !isUndefined(target);
+export function exists(): SearchFieldFunction {
+	return target => !isUndefined(target);
 }
 
-export function type(value: 'string' | 'number' | 'boolean' | 'null' | 'array' | 'object'): SearchFunction {
-	return (target: DocumentValue) => {
+export function type(value: 'string' | 'number' | 'boolean' | 'null' | 'array' | 'object'): SearchFieldFunction {
+	return target => {
 		switch (value) {
 			case 'string':
 				return isString(target);
@@ -67,30 +69,30 @@ export function type(value: 'string' | 'number' | 'boolean' | 'null' | 'array' |
 	};
 }
 
-export function includes(value: DocumentPrimitive): SearchFunction {
-	return (target: DocumentValue) => isArray(target) && target.includes(value as any);
+export function includes(value: DocumentPrimitive): SearchFieldFunction {
+	return target => isArray(target) && target.includes(value as any);
 }
 
-export function length(value: number): SearchFunction {
-	return (target: DocumentValue) => isArray(target) && target.length === value;
+export function length(value: number): SearchFieldFunction {
+	return target => isArray(target) && target.length === value;
 }
 
-export function elementMatch(...values: SearchQueryValue[]): SearchFunction {
-	return (target: DocumentValue) => isArray(target) && target.some((targetValue: DocumentValue) => values.every((value: SearchQueryValue) => matchValues(value, targetValue)));
+export function elementMatch(...values: SearchQueryValue[]): SearchFieldFunction {
+	return target => isArray(target) && target.some((targetValue: DocumentValue) => values.every((value: SearchQueryValue) => matchValues(value, targetValue)));
 }
 
-export function not(value: SearchQueryValue): SearchFunction {
-	return (target: DocumentValue) => matchValues(value, target) === false;
+export function not(value: SearchQueryValue): SearchFieldFunction {
+	return target => matchValues(value, target as DocumentValue) === false;
 }
 
-export function and(...values: SearchQueryValue[]): SearchFunction {
-	return (target: DocumentValue) => values.every(value => matchValues(value, target));
+export function and(...values: SearchQueryValue[]): SearchFieldFunction {
+	return target => values.every(value => matchValues(value, target as DocumentValue));
 }
 
-export function or(...values: SearchQueryValue[]): SearchFunction {
-	return (target: DocumentValue) => values.some(value => matchValues(value, target));
+export function or(...values: SearchQueryValue[]): SearchFieldFunction {
+	return target => values.some(value => matchValues(value, target as DocumentValue));
 }
 
-export function nor(...values: SearchQueryValue[]): SearchFunction {
-	return (target: DocumentValue) => !values.some(value => matchValues(value, target));
+export function nor(...values: SearchQueryValue[]): SearchFieldFunction {
+	return target => !values.some(value => matchValues(value, target as DocumentValue));
 }

@@ -1,15 +1,9 @@
-/**
- * Database initialization config
- */
+/** Database initialization config */
 export interface DatabaseConfig {
-	/**
-	 * Path to the database file.
-	 */
+	/** Path to the database file. */
 	filePath?: string;
 
-	/**
-	 * Save data in easy-to-read format.
-	 */
+	/** Save data in easy-to-read format. */
 	pretty: boolean;
 
 	/**
@@ -32,9 +26,7 @@ export interface DatabaseConfig {
 	schemaValidator?: SchemaValidator;
 }
 
-/**
- * Database file structure.
- */
+/** Database file structure. */
 export interface DatabaseFile {
 	/** Timestamp of the last data writing. */
 	timestamp: number;
@@ -43,68 +35,49 @@ export interface DatabaseFile {
 	documents: Document[];
 }
 
-/**
- * Any document-like object.
- */
+/** Any document-like object. */
 export interface Document {
 	[key: string]: DocumentValue;
 }
 
-/**
- * Any object without specified structure.
- */
+/** Any object without specified structure. */
 export interface UnknownObject {
 	[key: string]: any;
 }
 
-/**
- *
- */
+/** Checking the object for suitability for storage. */
 export type Acceptable<T> = { [K in keyof T]: T[K] & DocumentValue };
 
-/**
- * Search query.
- */
-export type SearchQuery<T> = { [K in keyof T]?: T[K] | SearchFunction | RegExp } & { [key: string]: DocumentValue | SearchFunction | RegExp };
+/** Search query. */
+export type SearchQuery<T extends Acceptable<T> = Document> = { [K in keyof T]?: SearchQueryValue<T[K]>  } | SearchFunction<T> | undefined;
 
-/**
- * Update query.
- */
-export type UpdateQuery<T> = ({ [K in keyof T]?: T[K] & DocumentValue } & { [key: string]: DocumentValue }) | ((document: T) => void);
+/** Update query. */
+export type UpdateQuery<T extends Acceptable<T> = Document> = { [K in keyof T]?: UpdateQueryValue<T[K]> } | UpdateFunction<T> | undefined;
 
-/**
- * Sorting function.
- */
-export type SortFunction = (a: Readonly<DocumentValue>, b: Readonly<DocumentValue>) => number;
-
-/**
- * Search function for search queries.
- */
-export type SearchFunction = (DocumentValue: DocumentValue) => boolean;
-
-/**
- * Manual schema validation.
- */
-export type SchemaValidator = (document: Readonly<Document>) => void;
-
-/**
- * Supported primitives.
- */
+/** Supported primitives. */
 export type DocumentPrimitive = string | number | boolean | null;
 
-/**
- * Supported documents DocumentValues.
- */
-export type DocumentValue = DocumentPrimitive | DocumentPrimitive[] | Document | Document[] | undefined;
+/** Supported documents values. */
+export type DocumentValue = DocumentPrimitive | DocumentPrimitive[] | Document | Document[];
 
-/**
- * Search query value.
- */
-export type SearchQueryValue = DocumentValue | SearchFunction | RegExp | undefined;
+/** Search function for search queries. */
+export type SearchFunction<T = Document> = (value: Readonly<T>) => boolean;
 
-/**
- * Cursor methods.
- */
+export type SearchQueryValue<T = DocumentValue> = T | SearchFieldFunction<T> | RegExp | undefined;
+
+export type UpdateQueryValue<T = DocumentValue> = T | UpdateFieldFunction<T> | undefined;
+
+export type UpdateFunction<T = Document> = (value: T) => T;
+export type SearchFieldFunction<T = DocumentValue> = (value: Readonly<T>) => boolean;
+export type UpdateFieldFunction<T = DocumentValue> = (value: T) => T;
+
+/** Manual schema validation. */
+export type SchemaValidator = (document: Readonly<Document>) => void;
+
+/** Sorting function */
+export type SortFunction = (a: Readonly<DocumentValue>, b: Readonly<DocumentValue>) => number;
+
+/** Cursor methods. */
 export type CursorMethod =
 	| { type: 'limit'; number: number }
 	| { type: 'skip'; number: number }

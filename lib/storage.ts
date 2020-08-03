@@ -24,6 +24,7 @@ export class Storage {
 
 	/**
 	 * Write data to the database file.
+	 * @param documents Documents to write.
 	 */
 	public async write(documents: Document[]): Promise<void> {
 		try {

@@ -1,5 +1,5 @@
 import DatabaseError from './error.ts';
-import { Acceptable, UnknownObject, DocumentValue, SearchQueryValue, UpdateQuery } from './declarations.ts';
+import { Acceptable, Document, UnknownObject, DocumentValue, SearchQueryValue, UpdateQuery, UpdateQueryValue } from './declarations.ts';
 import { isFunction, isArray, isObject, isString, isNumber, isRegExp, isBoolean, isNull, isUndefined } from './types.ts';
 
 /**
@@ -22,12 +22,23 @@ export function isObjectEmpty(target: UnknownObject): boolean {
 }
 
 /**
+ * Generate array of numbers from 0 to Nth.
+ * @param number Nth value.
+ * @returns Generated array.
+ */
+export function numbersList(number: number): number[] {
+	const array: number[] = [];
+	for (let i = -1; i < number; i++) array.push(i);
+	return array;
+}
+
+/**
  * Get number of keys in object.
  * @param target An object for key counting.
  * @returns Number of keys.
  */
 export function getObjectLength(target: UnknownObject): number {
-	let length = 0;
+	let length: number = 0;
 	for (let key in target) length++;
 	return length;
 }
@@ -96,67 +107,6 @@ export function deepCompare(targetA: unknown, targetB: unknown): boolean {
 }
 
 /**
- * Get nested value from object using dot notation.
- * @param query Path to the value.
- * @param object Object to get value from.
- * @return Found value.
- */
-export function getNestedValue(query: string, object: UnknownObject): any {
-	if (!query.includes('.')) return object[query];
-
-	const parts = query.split('.');
-	const length = parts.length;
-	let property = object;
-
-	for (let i = 0; i < length; i++) {
-		const part = parts[i];
-		const nested = property[part];
-
-		if (isArray(nested) || isObject(nested)) {
-			property = nested;
-		} else {
-			return i === length - 1 ? nested : undefined;
-		}
-	}
-
-	return property;
-}
-
-/**
- * Set property of nested object .
- * @param query Path to the value.
- * @param value Value to set.
- * @param object Object to set value in.
- */
-export function setNestedValue(query: string, value: any, object: UnknownObject): void {
-	if (!query.includes('.')) {
-		object[query] = value;
-		return;
-	}
-
-	const parts = query.split('.');
-	const length = parts.length - 1;
-	let property = object;
-
-	for (let i = 0; i < length; i++) {
-		const part = parts[i];
-		const nested = property[part];
-		const nextPart = parts[i + 1] as any;
-
-		if (isArray(nested)) {
-			if (!isUndefined(nextPart) && isNaN(nextPart)) property[part] = {};
-		} else {
-			if (!isObject(nested)) property[part] = {};
-		}
-
-		property = property[part];
-	}
-
-	const lastPart = parts[length];
-	property[lastPart] = value;
-}
-
-/**
  * Compares the value from the query and from the document.
  * @param queryValue Value from query.
  * @param documentValue Value from document.
@@ -187,17 +137,19 @@ export function matchValues(queryValue: SearchQueryValue, documentValue: Documen
 }
 
 /**
- * Update document.
+ * Update object.
  * @param query Update query.
  * @param document Document to update.
  */
-export function updateDocument<T extends Acceptable<T>>(query: UpdateQuery<T>, document: T): void {
+export function updateObject(query: UnknownObject, document: Document): Document {
 	if (isFunction(query)) return query(document);
 
 	for (const key in query) {
-		const queryValue: DocumentValue = deepClone(query[key]);
-		setNestedValue(key, queryValue, document);
+		const value: UpdateQueryValue = query[key] as UpdateQueryValue;
+		document[key] = isFunction(value) ? value(document[key]) : value as DocumentValue;
 	}
+
+	return document;
 }
 
 /**
@@ -207,10 +159,6 @@ export function updateDocument<T extends Acceptable<T>>(query: UpdateQuery<T>, d
 export function prepareObject(target: UnknownObject): void {
 	for (const key in target) {
 		const value = target[key];
-
-		if (key.includes('.')) {
-			throw new DatabaseError('Fields in documents cannot contain a "." character');
-		}
 
 		if (isArray(value)) {
 			prepareArray(value);

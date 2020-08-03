@@ -4,7 +4,7 @@ import { SearchQuery, CursorMethod, DatabaseConfig, Acceptable } from './declara
 // TODO
 export class Cursor<Schema extends Acceptable<Schema>> {
 	/** Main search query. */
-	private query: SearchQuery<Schema> = {};
+	private query: SearchQuery<Schema>;
 
 	/** Database configuration. */
 	private config: DatabaseConfig;
@@ -68,7 +68,7 @@ export class Cursor<Schema extends Acceptable<Schema>> {
 
 		for (let i = 0; i < methods.length; i++) {
 			const method: CursorMethod = methods[i];
-			const type = method.type;
+			const type: string = method.type;
 
 			if (type === 'reverse') {
 				found.reverse();

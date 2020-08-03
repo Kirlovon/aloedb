@@ -1,8 +1,6 @@
 import { isError, isString } from './types.ts';
 
-/**
- * Custom database error.
- */
+/** Custom database error. */
 export class DatabaseError extends Error {
   /** Error name. */
   public name: string = 'DatabaseError';
