@@ -12,6 +12,7 @@ import {
 	updateObject,
 	matchValues,
 } from '../../lib/utils.ts';
+import { DocumentValue } from '../../lib/declarations.ts';
 
 Deno.test(`${green('[utils.ts]')} cleanArray`, () => {
 	const array = [1, 2, 3, 4, , 6, undefined, null];
@@ -169,12 +170,7 @@ Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
 		g: [1, 2, undefined],
 	};
 
-	const b: any = {
-		a: undefined,
-		'f.test': { value: undefined },
-	};
-
-	const c: any = {
+	const invalid: any = {
 		a: 1,
 		b: new Date(),
 	};
@@ -189,8 +185,7 @@ Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
 		g: [1, 2, null],
 	});
 
-	assertThrows(() => prepareObject(b));
-	assertThrows(() => prepareObject(c));
+	assertThrows(() => prepareObject(invalid));
 });
 
 Deno.test(`${green('[utils.ts]')} matchValues`, () => {
@@ -198,7 +193,7 @@ Deno.test(`${green('[utils.ts]')} matchValues`, () => {
 	assertEquals(matchValues(88, 88), true);
 	assertEquals(matchValues(true, true), true);
 	assertEquals(matchValues(null, null), true);
-	assertEquals(matchValues(undefined, undefined), true);
+	assertEquals(matchValues(undefined, undefined as any), true);
 	assertEquals(
 		matchValues(value => value === 'test', 'test'),
 		true
@@ -232,12 +227,12 @@ Deno.test(`${green('[utils.ts]')} updateObject`, () => {
 	updateObject({ value: undefined }, object);
 	assertEquals(object, { test: '123', value: undefined });
 
-	updateObject(document => {
+	updateObject((document: any) => {
 		document.value = 3;
 		return document;
 	}, object);
 	assertEquals(object, { test: '123', value: 3 });
 
-	updateObject({ value: x => { return [1, 2, 3, x ]} }, object);
-	assertEquals(object, { test: '123', value: 3 });
+	updateObject({ value: (x: any) => [1, 2, 3, x ] }, object);
+	assertEquals(object, { test: '123', value: [1, 2, 3, 3] });
 });

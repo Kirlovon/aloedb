@@ -4,22 +4,42 @@ import { DocumentValue, DocumentPrimitive, SearchFunction, SearchFieldFunction, 
 
 // TODO: Comments
 
+/**
+ * Compares document value and users specified value
+ * @param value Value to check
+ */
 export function equal(value: DocumentValue): SearchFieldFunction {
 	return target => deepCompare(target, value);
 }
 
+/**
+ * Checks if value from document and from the user are not equals
+ * @param value Value to check
+ */
 export function notEqual(value: DocumentValue): SearchFieldFunction {
 	return target => !deepCompare(target, value);
 }
 
+/**
+ * Checks if documents value inside the array of specified values
+ * @param values Array of value to check 
+ */
 export function inside(values: DocumentPrimitive[]): SearchFieldFunction {
 	return target => values.includes(target as any);
 }
 
+/**
+ * Checks if value not inside the array of user-specified values
+ * @param values Array of values to check  
+ */
 export function notInside(values: DocumentPrimitive[]): SearchFieldFunction {
 	return target => !values.includes(target as any);
 }
 
+/**
+ * Checks if user-specifief value larger than 
+ * @param value Value to check ( Number )
+ */
 export function moreThan(value: number): SearchFieldFunction {
 	return target => (target as number) > value;
 }

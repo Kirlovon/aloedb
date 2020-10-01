@@ -5,17 +5,18 @@ import { DatabaseConfig, DatabaseFile, Document } from './declarations.ts';
 import { writeFile, readFileSync, ensureFileSync, renameFile, fileExistsSync } from './files.ts';
 
 export class Storage {
-	/** Database configuration. */
-	private config: DatabaseConfig;
-
+	
 	/** Next data for writing. */
 	private toWrite: Document[] | null = null;
-
+	
 	/** Lock writing. */
 	private isLocked: boolean = false;
+	
+	/** Database configuration. */
+	private readonly config: DatabaseConfig;
 
 	/** Temporary file extension. */
-	private extension: string = '.temp';
+	private readonly extension: string = '.temp';
 
 	/** Storage initialization. */
 	constructor(config: DatabaseConfig) {

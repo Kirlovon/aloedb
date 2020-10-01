@@ -1,6 +1,5 @@
-import DatabaseError from './error.ts';
-import { Acceptable, Document, UnknownObject, DocumentValue, SearchQueryValue, UpdateQuery, UpdateQueryValue } from './declarations.ts';
 import { isFunction, isArray, isObject, isString, isNumber, isRegExp, isBoolean, isNull, isUndefined } from './types.ts';
+import { Acceptable, Document, UnknownObject, DocumentValue, SearchQueryValue, UpdateQuery, UpdateQueryValue } from './declarations.ts';
 
 /**
  * Remove all empty items from the array.

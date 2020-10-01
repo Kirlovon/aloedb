@@ -6,6 +6,9 @@ export interface DatabaseConfig {
 	/** Save data in easy-to-read format. */
 	pretty: boolean;
 
+	/** Automatically deeply clone all returned objects. */
+	immutable: boolean;
+
 	/**
 	 * Write data to the file without risk of loss.
 	 * Instead of simply writing data to a file, the data will be written to a temporary file, which will then be renamed the main file.
@@ -34,6 +37,20 @@ export interface DatabaseFile {
 	/** Stored documents. */
 	documents: Document[];
 }
+
+export interface MethodConfig {
+	/** Return method execution result. _( Default: true )_ */
+	return: boolean;
+
+	/** Deeply clone returnable documents. _( Default: true )_  */
+	immutable: boolean;
+}
+
+export interface UpdateMethodConfig extends MethodConfig {
+	/** Return old documents after update operations. _( Default: false )_  */
+	old: boolean;
+}
+
 
 /** Any document-like object. */
 export interface Document {
@@ -78,9 +95,15 @@ export type SchemaValidator = (document: Readonly<Document>) => void;
 export type SortFunction = (a: Readonly<DocumentValue>, b: Readonly<DocumentValue>) => number;
 
 /** Cursor methods. */
-export type CursorMethod =
-	| { type: 'limit'; number: number }
-	| { type: 'skip'; number: number }
-	| { type: 'sort'; query: number }
-	| { type: 'filter'; query: number }
-	| { type: 'reverse' };
+export type CursorMethods = LimitCursorMethod | 
+	SkipCursorMethod | 
+	SortCursorMethod | 
+	FilterCursorMethod | 
+	ReverseCursorMethod;
+
+export type LimitCursorMethod = { type: 'limit', query: number };
+export type SkipCursorMethod = { type: 'skip', query: number };
+export type SortCursorMethod = { type: 'sort', query: number | SortFunction };
+export type FilterCursorMethod = { type: 'filter', query: number | (() => boolean) };
+export type ReverseCursorMethod = { type: 'reverse' };
+

@@ -39,7 +39,7 @@ async function FindOneBenchmark(): Promise<number> {
             string: `test-${i}`,
             array: [i, i, i],
             object: { boolean: true },
-        });
+        }, { return: true });
     }
 
     const end = performance.now();
