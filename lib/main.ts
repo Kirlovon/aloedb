@@ -253,7 +253,7 @@ class AloeDB<Schema extends Acceptable<Schema> = Document> {
 				const updatedDocument: Schema = updateObject(update, documentClone) as Schema;
 				if (schemaValidator) schemaValidator(updatedDocument); // TODO: Fix, doesnt use throw, or cancel old operations
 
-				this.documents[position] = deepClone(document);
+				this.documents[position] = deepClone(updatedDocument);
 				this.save();
 
 				updated.push(document);
