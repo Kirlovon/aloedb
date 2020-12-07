@@ -1,7 +1,9 @@
-import { isError, isString } from './types.ts';
+import { isError, isString } from './utils.ts';
 
-/** Custom database error. */
-export class DatabaseError extends Error {
+/**
+ * Custom database error. 
+ */
+export default class DatabaseError extends Error {
   /** Error name. */
   public name: string = 'DatabaseError';
 
@@ -12,15 +14,14 @@ export class DatabaseError extends Error {
   public stack: string | undefined;
 
   /** Cause of the error. */
-  public cause: any;
+  public cause?: string | Error;
 
   /**
 	 * Error initialization.
-	 * @param name Error name.
 	 * @param message Error message.
 	 * @param cause Cause of the error.
 	 */
-  constructor(message: string, cause?: any) {
+  constructor(message: string, cause?: string | Error) {
     super(message);
     Error.captureStackTrace(this, DatabaseError);
 
@@ -28,10 +29,8 @@ export class DatabaseError extends Error {
     if (cause) this.cause = cause;
 
     if (isString(cause)) this.message = `${message}: ${cause}`;
-    if (isError(cause) && isString(cause.message)) {
+    if (isError(cause) && isString(cause?.message)) {
       this.message = `${message}: ${cause.message}`;
     }
   }
 }
-
-export default DatabaseError;

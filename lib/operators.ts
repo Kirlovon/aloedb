@@ -1,76 +1,77 @@
-import { deepCompare, matchValues } from './utils.ts';
-import { isArray, isUndefined, isString, isNumber, isBoolean, isNull, isObject } from './types.ts';
-import { DocumentValue, DocumentPrimitive, SearchFunction, SearchFieldFunction, SearchQueryValue } from './declarations.ts';
-
-// TODO: Comments
+import { matchValues } from './core.ts';
+import { DocumentValue, DocumentPrimitive, QueryValue } from './types.ts';
+import { isArray, isUndefined, isString, isNumber, isBoolean, isNull, isObject } from './utils.ts';
 
 /**
- * Compares document value and users specified value
- * @param value Value to check
+ * Selects documents where the value of a field more than specified number.
+ * @param value
+ * @example
+ * ```typescript
+ * db.documents; // [{ value: 5 }]
+ * db.findOne({ value: moreThan(6) }); // null 
+ * db.findOne({ value: moreThan(3) }); // { value: 5 } 
+ * ```
  */
-export function equal(value: DocumentValue): SearchFieldFunction {
-	return target => deepCompare(target, value);
-}
-
-/**
- * Checks if value from document and from the user are not equals
- * @param value Value to check
- */
-export function notEqual(value: DocumentValue): SearchFieldFunction {
-	return target => !deepCompare(target, value);
+export function moreThan(value: number) {
+	return (target: DocumentValue) => isNumber(target) && target > value;
 }
 
 /**
- * Checks if documents value inside the array of specified values
- * @param values Array of value to check 
+ * Selects documents where the value of a field more than or equal to the specified number.
+ * @param value 
  */
-export function inside(values: DocumentPrimitive[]): SearchFieldFunction {
-	return target => values.includes(target as any);
+export function moreThanOrEqual(value: number) {
+	return (target: DocumentValue) => isNumber(target) && target >= value;
 }
 
 /**
- * Checks if value not inside the array of user-specified values
- * @param values Array of values to check  
+ * Selects documents where the value of a field less than specified number.
+ * @param value 
  */
-export function notInside(values: DocumentPrimitive[]): SearchFieldFunction {
-	return target => !values.includes(target as any);
+export function lessThan(value: number) {
+	return (target: DocumentValue) => isNumber(target) && target < value;
 }
 
 /**
- * Checks if user-specifief value larger than 
- * @param value Value to check ( Number )
+ * Selects documents where the value of a field less than or equal to the specified number.
+ * @param value 
  */
-export function moreThan(value: number): SearchFieldFunction {
-	return target => (target as number) > value;
+export function lessThanOrEqual(value: number) {
+	return (target: DocumentValue) => isNumber(target) && target <= value;
 }
 
-export function moreThanOrEqual(value: number): SearchFieldFunction {
-	return target => (target as number) >= value;
+/**
+ * Matches if number is between specified range values.
+ * @param min Range start.
+ * @param max Range end.
+ */
+export function between(min: number, max: number) {
+	return (target: DocumentValue) => isNumber(target) && target > min && target < max;
 }
 
-export function lessThan(value: number): SearchFieldFunction {
-	return target => (target as number) < value;
+/**
+ * Matches if number is between or equal to the specified range values.
+ * @param min Range start.
+ * @param max Range end.
+ */
+export function betweenOrEqual(min: number, max: number) {
+	return (target: DocumentValue) => isNumber(target) && target >= min && target <= max;
 }
 
-export function lessThanOrEqual(value: number): SearchFieldFunction {
-	return target => (target as number) <= value;
+/**
+ * Matches if field exists.
+ */
+export function exists() {
+	return (target: DocumentValue) => !isUndefined(target);
 }
 
-export function between(min: number, max: number): SearchFieldFunction {
-	return target => (target as number) > min && (target as number) < max;
-}
-
-export function betweenOrEqual(min: number, max: number): SearchFieldFunction {
-	return target => (target as number) >= min && (target as number) <= max;
-}
-
-export function exists(): SearchFieldFunction {
-	return target => !isUndefined(target);
-}
-
-export function type(value: 'string' | 'number' | 'boolean' | 'null' | 'array' | 'object'): SearchFieldFunction {
-	return target => {
-		switch (value) {
+/**
+ * Matches if value type equal to specified type.
+ * @param type Type of the value.
+ */
+export function type(type: 'string' | 'number' | 'boolean' | 'null' | 'array' | 'object') {
+	return (target: DocumentValue) => {
+		switch (type) {
 			case 'string':
 				return isString(target);
 			case 'number':
@@ -89,30 +90,58 @@ export function type(value: 'string' | 'number' | 'boolean' | 'null' | 'array' |
 	};
 }
 
-export function includes(value: DocumentPrimitive): SearchFieldFunction {
-	return target => isArray(target) && target.includes(value as any);
+/**
+ * Matches if array includes specified value.
+ * @param value 
+ */
+export function includes(value: DocumentPrimitive) {
+	return (target: DocumentValue) => isArray(target) && target.includes(value);
 }
 
-export function length(value: number): SearchFieldFunction {
-	return target => isArray(target) && target.length === value;
+/**
+ * Matches if array length equal to specified length.
+ * @param length Length of the array. 
+ */
+export function length(length: number) {
+	return (target: DocumentValue) => isArray(target) && target.length === length;
 }
 
-export function elementMatch(...values: SearchQueryValue[]): SearchFieldFunction {
-	return target => isArray(target) && target.some((targetValue: DocumentValue) => values.every((value: SearchQueryValue) => matchValues(value, targetValue)));
+/**
+ * 
+ * @param values 
+ */
+export function someElementMatch(...values: QueryValue[]) {
+	return (target: DocumentValue) => isArray(target) && target.some(targetValue => values.every(value => matchValues(value, targetValue)));
 }
 
-export function not(value: SearchQueryValue): SearchFieldFunction {
-	return target => matchValues(value, target as DocumentValue) === false;
+/**
+ * 
+ * @param values 
+ */
+export function everyElementMatch(...values: QueryValue[]) {
+	return (target: DocumentValue) => isArray(target) && target.every(targetValue => values.every(value => matchValues(value, targetValue)));
 }
 
-export function and(...values: SearchQueryValue[]): SearchFieldFunction {
-	return target => values.every(value => matchValues(value, target as DocumentValue));
+/**
+ * Logical AND operator. Selects documents where the value of a field equals to all specified values.
+ * @param values Query values.
+ */
+export function and(...values: QueryValue[]) {
+	return (target: DocumentValue) => values.every(value => matchValues(value, target));
 }
 
-export function or(...values: SearchQueryValue[]): SearchFieldFunction {
-	return target => values.some(value => matchValues(value, target as DocumentValue));
+/**
+ * Logical OR operator. Selects documents where the value of a field equals at least one specified value.
+ * @param values Query values.
+ */
+export function or(...values: QueryValue[]) {
+	return (target: DocumentValue) => values.some(value => matchValues(value, target));
 }
 
-export function nor(...values: SearchQueryValue[]): SearchFieldFunction {
-	return target => !values.some(value => matchValues(value, target as DocumentValue));
+/**
+ * Logical NOT operator. Selects documents where the value of a field not equal to specified value.
+ * @param value Query value.
+ */
+export function not(value: QueryValue) {
+	return (target: DocumentValue) => matchValues(value, target) === false;
 }

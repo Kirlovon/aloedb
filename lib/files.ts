@@ -1,53 +1,55 @@
 /*
-	Functions for file system manipulation.
+	Functions for file system manipulation. 
+	The only file that contains platform specific code.
 	Lightweight version of standard library module. ( https://deno.land/std/fs )
-	TODO: Сan be replaced with a standard module when it becomes stable.
 */
+
+import { getPathDirname } from './utils.ts'
 
 /**
  * Write content to the file.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  * @param content Content to write.
  */
-export async function writeFile(filePath: string, content: string): Promise<void> {
-	await Deno.writeTextFile(filePath, content);
+export async function writeFile(path: string, content: string): Promise<void> {
+	await Deno.writeTextFile(path, content);
 }
 
 /**
  * Write content to the file synchronously.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  * @param content Content to write.
  */
-export function writeFileSync(filePath: string, content: string): void {
-	Deno.writeTextFileSync(filePath, content);
+export function writeFileSync(path: string, content: string): void {
+	Deno.writeTextFileSync(path, content);
 }
 
 /**
  * Read file.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  * @retunrs File content.
  */
-export async function readFile(filePath: string): Promise<string> {
-	return await Deno.readTextFile(filePath);
+export async function readFile(path: string): Promise<string> {
+	return await Deno.readTextFile(path);
 }
 
 /**
  * Read file synchronously.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  * @returns File content.
  */
-export function readFileSync(filePath: string): string {
-	return Deno.readTextFileSync(filePath);
+export function readFileSync(path: string): string {
+	return Deno.readTextFileSync(path);
 }
 
 /**
  * Check if file exists.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  * @returns Is file exists.
  */
-export async function fileExists(filePath: string): Promise<boolean> {
+export async function fileExists(path: string): Promise<boolean> {
 	try {
-		await Deno.lstat(filePath);
+		await Deno.lstat(path);
 		return true;
 	} catch (error) {
 		return false;
@@ -56,12 +58,12 @@ export async function fileExists(filePath: string): Promise<boolean> {
 
 /**
  * Check if file exists synchronously.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  * @returns Is file exists.
  */
-export function fileExistsSync(filePath: string): boolean {
+export function fileExistsSync(path: string): boolean {
 	try {
-		Deno.lstatSync(filePath);
+		Deno.lstatSync(path);
 		return true;
 	} catch (error) {
 		return false;
@@ -88,18 +90,18 @@ export function renameFileSync(oldPath: string, newPath: string): void {
 
 /**
  * Delete file.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  */
-export async function deleteFile(filePath: string): Promise<void> {
-	await Deno.remove(filePath, { recursive: false });
+export async function deleteFile(path: string): Promise<void> {
+	await Deno.remove(path, { recursive: false });
 }
 
 /**
  * Delete file synchronously.
- * @param filePath Path to the file.
+ * @param path Path to the file.
  */
-export function deleteFileSync(filePath: string): void {
-	Deno.removeSync(filePath, { recursive: false });
+export function deleteFileSync(path: string): void {
+	Deno.removeSync(path, { recursive: false });
 }
 
 /**
@@ -182,29 +184,4 @@ export function ensureDirSync(path: string): void {
 
 		throw error;
 	}
-}
-
-/**
- * Get filename from the path.
- * @param path Path to the file.
- * @returns Filename from the path.
- */
-export function getPathFilename(path: string): string {
-	const parsed: string[] = path.split(/[\\\/]/);
-	const filename: string | undefined = parsed.pop();
-
-	return filename ? filename : '';
-}
-
-/**
- * Get dirname from the path.
- * @param path Path to the file.
- * @returns Dirname from the path.
- */
-export function getPathDirname(path: string): string {
-	const parsed: string[] = path.split(/[\\\/]/);
-	parsed.pop();
-	const dirname: string = parsed.join('/');
-
-	return dirname;
 }

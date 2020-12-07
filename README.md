@@ -18,7 +18,7 @@
 
 ## Example
 ```typescript
-import { AloeDB } from 'https://deno.land/x/aloedb/mod.ts'
+import { Database } from 'https://deno.land/x/aloedb/mod.ts'
 
 // Structure of stored documents
 interface Film {
@@ -29,7 +29,7 @@ interface Film {
 }
 
 // Initialization
-const db = new AloeDB<Film>('./path/to/the/file.json');
+const db = new Database<Film>('./path/to/the/file.json');
 
 // Insert operations
 await db.insertOne({ 

@@ -1,3 +1,5 @@
-export { default as AloeDB } from './lib/main.ts';
+export { default as Database } from './lib/database.ts';
+
 export * as Operators from './lib/operators.ts';
-export * as Declarations from './lib/declarations.ts';
+export * as Types from './lib/types.ts';
+

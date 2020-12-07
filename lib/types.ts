@@ -1,100 +1,84 @@
-import { UnknownObject } from './declarations.ts';
-
 /**
- * Checks whether the value is a string.
- * @param target Target to check.
- * @returns Result of checking.
+ * Database initialization config
  */
-export function isString(target: unknown): target is string {
-	return typeof target === 'string';
+export interface DatabaseConfig {
+	/** Path to the database file. */
+	path?: string;
+
+	/** Save data in easy-to-read format. ( Default: true ) */
+	pretty: boolean;
+
+	/** Automatically deeply clone all returned objects. ( Default: true ) */
+	immutable: boolean;
+
+	/**
+	 * Write data to the file without risk of loss.
+	 * Instead of simply writing data to a file, the data will be written to a temporary file, which will then be renamed the main file. ( Default: true )
+	 */
+	safeWrite: boolean;
+
+	/**
+	 * Do not write data to the database file.
+	 * If "path" specified, data will be read from the file, but new data will not be written.
+	 */
+	onlyInMemory: boolean;
+
+	/**
+	 * Manual document validation function.
+	 * If the document does not pass the validation, just throw the error.
+	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
+	 */
+	schemaValidator?: SchemaValidator;
 }
 
 /**
- * Checks whether the value is a number.
- * @param target Target to check.
- * @returns Result of checking.
+ * Database file structure.
  */
-export function isNumber(target: unknown): target is number {
-	return typeof target === 'number' && !Number.isNaN(target);
+export interface DataStorage {
+	/** Timestamp of the last data writing. */
+	timestamp: number;
+
+	/** Stored documents. */
+	documents: Document[];
 }
 
-/**
- * Checks whether the value is a boolean.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isBoolean(target: unknown): target is boolean {
-	return typeof target === 'boolean';
+/** Any object without specified structure. */
+export interface PlainObject {
+	[key: string]: unknown;
 }
 
-/**
- * Checks whether the value is undefined.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isUndefined(target: unknown): target is undefined {
-	return typeof target === 'undefined';
-}
+/** Checking the object for suitability for storage. */
+export type Acceptable<T extends Document> = { [K in keyof T]: T[K] & DocumentValue };
 
-/**
- * Checks whether the value is a null.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isNull(target: unknown): target is null {
-	return target === null;
-}
+/** Any document-like object. */
+export type Document = { [key: string]: DocumentValue };
 
-/**
- * Checks whether the value is a function.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isFunction(target: unknown): target is (...args: any) => any {
-	return typeof target === 'function';
-}
+/** Array of document values. */
+export type DocumentArray = DocumentValue[];
 
-/**
- * Checks whether the value is an array.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isArray(target: unknown): target is any[] {
-	return target instanceof Array;
-}
+/** Supported documents values. */
+export type DocumentValue = DocumentPrimitive | Document | DocumentArray;
 
-/**
- * Checks whether the value is a object.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isObject(target: unknown): target is UnknownObject {
-	return target !== null && typeof target === 'object' && target?.constructor === Object;
-}
+/** Supported primitives. */
+export type DocumentPrimitive = string | number | boolean | null;
 
-/**
- * Checks whether the value is a regular expression.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isRegExp(target: unknown): target is RegExp {
-	return target instanceof RegExp;
-}
+/** Documents selection criteria. */
+export type Query<T extends Document = Document> = { [K in keyof T]?: QueryValue<T[K]> };
 
-/**
- * Checks whether the value is a date.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isDate(target: unknown): target is Date {
-	return target instanceof Date;
-}
+/** Manual вocuments selection function. */
+export type QueryFunction<T extends Document = Document> = (document: Readonly<T>) => boolean;
 
-/**
- * Checks whether the value is an error.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isError(target: unknown): target is Error {
-	return target instanceof Error;
-}
+/** Possible search query values. */
+export type QueryValue<T extends DocumentValue = DocumentValue> = DocumentValue | ((value: Readonly<T>) => boolean) | RegExp | undefined;
+
+/** The modifications to apply. */
+export type Update<T extends Document = Document> = { [K in keyof T]?: UpdateValue<T[K]> };
+
+/** Manual modifications applying. */
+export type UpdateFunction<T extends Document = Document> = (document: T) => T;
+
+/** Possible update values. */
+export type UpdateValue<T extends DocumentValue = DocumentValue> = T | ((value: T) => T) | undefined;
+
+/** Schema validation. Throw error, if document unsuitable.  */
+export type SchemaValidator = (document: Readonly<Document>) => void;

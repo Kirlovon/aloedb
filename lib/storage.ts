@@ -1,17 +1,18 @@
 import DatabaseError from './error.ts';
-import { prepareObject } from './utils.ts';
-import { isUndefined, isArray, isNumber, isObject } from './types.ts';
-import { DatabaseConfig, DatabaseFile, Document } from './declarations.ts';
+import { DatabaseConfig, DataStorage, Document } from './types.ts';
+import { prepareObject, isUndefined, isArray, isNumber, isObject } from './utils.ts';
 import { writeFile, readFileSync, ensureFileSync, renameFile, fileExistsSync } from './files.ts';
 
-export class Storage {
-	
+/**
+ * Storage manager. Responsible for writing and reading data.
+ */
+export default class Storage {
 	/** Next data for writing. */
 	private toWrite: Document[] | null = null;
-	
+
 	/** Lock writing. */
 	private isLocked: boolean = false;
-	
+
 	/** Database configuration. */
 	private readonly config: DatabaseConfig;
 
@@ -29,20 +30,22 @@ export class Storage {
 	 */
 	public async write(documents: Document[]): Promise<void> {
 		try {
-			const { filePath, onlyInMemory, safeWrite } = this.config;
-			const file: string = filePath as string;
+			const { path, onlyInMemory, safeWrite } = this.config;
+			const file: string = path as string;
 
-			if (!filePath || onlyInMemory) return;
+			if (!path || onlyInMemory) return;
+
 			if (this.isLocked) {
 				this.toWrite = documents;
 				return;
 			}
 
 			this.isLocked = true;
+
 			const encoded: string = this.encode(documents);
 
 			if (safeWrite) {
-				const tempFile = file + this.extension;
+				const tempFile: string = file + this.extension;
 				await writeFile(tempFile, encoded);
 				await renameFile(tempFile, file);
 			} else {
@@ -54,8 +57,7 @@ export class Storage {
 			if (isArray(this.toWrite)) {
 				const toWriteCopy: Document[] = this.toWrite;
 				this.toWrite = null;
-
-				await this.write(toWriteCopy);
+				this.write(toWriteCopy);
 			}
 		} catch (error) {
 			throw new DatabaseError('Error writing database file', error);
@@ -68,18 +70,18 @@ export class Storage {
 	 */
 	public read(): Document[] {
 		try {
-			const { filePath } = this.config;
+			const { path, schemaValidator } = this.config;
 
-			if (isUndefined(filePath)) return [];
-			if (fileExistsSync(filePath) === false) {
-				ensureFileSync(filePath, this.encode());
+			if (isUndefined(path)) return [];
+			if (fileExistsSync(path) === false) {
+				ensureFileSync(path, this.encode());
 				return [];
 			}
 
-			const fileContent: string = readFileSync(filePath);
-			if (fileContent.trim() === '') return [];
+			const fileContent: string = readFileSync(path).trim();
+			if (fileContent === '') return [];
 
-			const parsedFile: DatabaseFile = JSON.parse(fileContent);
+			const parsedFile: DataStorage = JSON.parse(fileContent);
 
 			if (!isNumber(parsedFile?.timestamp)) throw new TypeError('Field "timestamp" must be a number');
 			if (!isArray(parsedFile?.documents)) throw new TypeError('Field "documents" must be an array');
@@ -88,6 +90,7 @@ export class Storage {
 				const document: Document = parsedFile.documents[i];
 				if (!isObject(document)) throw new TypeError('Field "documents" must contain only objects');
 				prepareObject(document);
+				if (schemaValidator) schemaValidator(document);
 			}
 
 			return parsedFile.documents;
@@ -104,7 +107,7 @@ export class Storage {
 	private encode(documents: Document[] = []): string {
 		const { pretty } = this.config;
 
-		const data: DatabaseFile = {
+		const data: DataStorage = {
 			timestamp: Date.now(),
 			documents: documents,
 		};
@@ -113,5 +116,3 @@ export class Storage {
 		return encoded;
 	}
 }
-
-export default Storage;

@@ -1,4 +1,4 @@
-import { AloeDB, Operators } from '../../mod.ts';
+import { Database } from '../../mod.ts';
 import { BenchmarkDocument, CalculateResult } from './utils.ts';
 
 /**
@@ -9,7 +9,7 @@ const DocumentsCount = 1000;
 const Iterations = 10;
 const Results = [];
 
-const db = new AloeDB<BenchmarkDocument>({ onlyInMemory: true });
+const db = new Database<BenchmarkDocument>({ onlyInMemory: true });
 
 for (let i = -1; i < Iterations; i++) {
     const first: boolean = i === -1;
@@ -39,7 +39,7 @@ async function FindOneBenchmark(): Promise<number> {
             string: `test-${i}`,
             array: [i, i, i],
             object: { boolean: true },
-        }, { return: true });
+        });
     }
 
     const end = performance.now();
