@@ -99,6 +99,7 @@ export function deepClone<T>(target: T): T {
  */
 export function deepCompare(targetA: unknown, targetB: unknown): boolean {
 	if (isNull(targetA)) return isNull(targetB);
+	if (isNull(targetB)) return isNull(targetA);
 
 	if (isArray(targetA) && isArray(targetB)) {
 		if (targetA.length !== targetB.length) return false;

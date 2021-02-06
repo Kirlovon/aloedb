@@ -12,15 +12,15 @@ import {
 	deepCompare,
 	prepareArray,
 	prepareObject,
-	isString, 
-	isNumber, 
-	isBoolean, 
-	isUndefined, 
-	isNull, 
-	isFunction, 
-	isArray, 
-	isObject, 
-	isRegExp, 
+	isString,
+	isNumber,
+	isBoolean,
+	isUndefined,
+	isNull,
+	isFunction,
+	isArray,
+	isObject,
+	isRegExp,
 	isError,
 } from '../lib/utils.ts';
 
@@ -50,151 +50,139 @@ Deno.test(`${green('[utils.ts]')} getObjectLength`, () => {
 });
 
 Deno.test(`${green('[utils.ts]')} getPathFilename`, () => {
-	assertEquals(getPathFilename('file.json'), 'file.json');
-	assertEquals(getPathFilename('./test/file.json'), 'file.json');
-	assertEquals(getPathFilename('other/test/file.json'), 'file.json');
-	assertEquals(getPathFilename('/file/file.json'), 'file.json');
-	assertEquals(getPathFilename('//file//file.json'), 'file.json');
-	assertEquals(getPathFilename('\\file\\file.json'), 'file.json');
+	assertEquals(getPathFilename('foo.json'), 'foo.json');
+	assertEquals(getPathFilename('./foo/bar.json'), 'bar.json');
+	assertEquals(getPathFilename('foo/bar/baz.json'), 'baz.json');
+	assertEquals(getPathFilename('/foo/bar.json'), 'bar.json');
+	assertEquals(getPathFilename('//foo//bar.json'), 'bar.json');
+	assertEquals(getPathFilename('\\foo\\bar.json'), 'bar.json');
 });
 
 Deno.test(`${green('[utils.ts]')} getPathDirname`, () => {
-	assertEquals(getPathDirname('file.json'), '');
-	assertEquals(getPathDirname('./test/file.json'), './test');
-	assertEquals(getPathDirname('other/test/file.json'), 'other/test');
-	assertEquals(getPathDirname('/file/file.json'), 'file');
-	assertEquals(getPathDirname('//file//file.json'), 'file');
-	assertEquals(getPathDirname('\\file\\file.json'), 'file');
+	assertEquals(getPathDirname('foo.json'), '');
+	assertEquals(getPathDirname('./foo/bar.json'), './foo');
+	assertEquals(getPathDirname('foo/bar/baz.json'), 'foo/bar');
+	assertEquals(getPathDirname('/foo/bar.json'), 'foo');
+	assertEquals(getPathDirname('//foo//bar.json'), 'foo');
+	assertEquals(getPathDirname('\\foo\\bar.json'), 'foo');
 });
 
+Deno.test(`${green('[utils.ts]')} deepClone (Primitives)`, () => {
+	const number = 42;
+	const string = 'foo';
+	const boolean = true;
+	const undefinedValue = undefined;
+	const nullValue = null;
 
-Deno.test(`${green('[utils.ts]')} deepClone ( Primitives )`, () => {
-	const a = 1;
-	const b = 'test';
-	const c = true;
-	const d = undefined;
-	const e = null;
+	const numberClone = deepClone(number);
+	const stringClone = deepClone(string);
+	const booleanClone = deepClone(boolean);
+	const undefinedClone = deepClone(undefinedValue);
+	const nullClone = deepClone(nullValue);
 
-	const aClone = deepClone(a);
-	const bClone = deepClone(b);
-	const cClone = deepClone(c);
-	const dClone = deepClone(d);
-	const eClone = deepClone(e);
-
-	assertEquals(a, aClone);
-	assertEquals(b, bClone);
-	assertEquals(c, cClone);
-	assertEquals(d, dClone);
-	assertEquals(e, eClone);
+	assertEquals(number, numberClone);
+	assertEquals(string, stringClone);
+	assertEquals(boolean, booleanClone);
+	assertEquals(undefinedValue, undefinedClone);
+	assertEquals(nullValue, nullClone);
 });
 
-Deno.test(`${green('[utils.ts]')} deepClone ( Objects & Arrays )`, () => {
-	const a = [1, 'test', true, null, undefined];
-	const b = {
-		a: 1,
-		b: 'test',
-		c: true,
-		d: null,
-		e: undefined,
-	};
+Deno.test(`${green('[utils.ts]')} deepClone (Objects & Arrays)`, () => {
+	const array = [42, 'foo', true, null, undefined];
+	const object = { a: 42, b: 'foo', c: true, d: null, e: undefined };
 
-	const aClone = deepClone(a);
-	const bClone = deepClone(b);
+	const arrayClone = deepClone(array);
+	const objectClone = deepClone(object);
 
-	assertEquals(a, aClone);
-	assertEquals(b, bClone);
-	assert(a !== aClone);
-	assert(b !== bClone);
+	assertEquals(array, arrayClone);
+	assertEquals(object, objectClone);
+	assert(array !== arrayClone);
+	assert(object !== objectClone);
 
-	a[0] = 0;
-	b.a = 0;
+	array[0] = 0;
+	object.a = 0;
 
-	assertNotEquals(a, aClone);
-	assertNotEquals(b, bClone);
+	assertNotEquals(array, arrayClone);
+	assertNotEquals(object, objectClone);
 });
 
-Deno.test(`${green('[utils.ts]')} deepClone ( Mixed )`, () => {
+Deno.test(`${green('[utils.ts]')} deepClone (Mixed)`, () => {
 	const object: any = {
 		a: 1,
-		b: 'text',
+		b: 'bar',
 		c: true,
 		d: undefined,
 		e: null,
-		f: { test: null, value: undefined, x: [1, 2, 3], z: { test: 'text' } },
-		g: [1, true, 'text', null, undefined, { test: 1 }, [1, 2, 3]],
+		f: { test: null, value: undefined, x: [1, 2, 3], z: { foo: 'bar' } },
+		g: [1, true, 'baz', null, undefined, { test: 1 }, [1, 2, 3]],
 	};
 
-	const clone = deepClone(object);
+	const objectClone = deepClone(object);
 
-	assertEquals(clone, object);
-	assert(clone !== object);
+	assertEquals(objectClone, object);
+	assert(objectClone !== object);
 
 	object.a = 0;
-	assert(object.a !== clone.a);
+	assert(object.a !== objectClone.a);
 
 	object.f.x[0] = 0;
-	assert(object.f.x[0] !== clone.f.x[0]);
+	assert(object.f.x[0] !== objectClone.f.x[0]);
 
 	object.g = 0;
-	assert(object.g !== clone.g);
+	assert(object.g !== objectClone.g);
 });
 
-Deno.test(`${green('[utils.ts]')} deepCompare ( Primitives )`, () => {
-	const a = 'test';
-	const b = true;
-	const c = 1;
-	const d = null;
-	const e = undefined;
+Deno.test(`${green('[utils.ts]')} deepCompare (Primitives)`, () => {
+	const string = 'foo';
+	const boolean = true;
+	const number = 42;
+	const nullValue = null;
+	const undefinedValue = undefined;
 
-	assertEquals(deepCompare(a, 'test2'), false);
-	assertEquals(deepCompare(b, false), false);
-	assertEquals(deepCompare(c, 0), false);
-	assertEquals(deepCompare(d, undefined), false);
-	assertEquals(deepCompare(e, null), false);
+	assertEquals(deepCompare(string, 'bar'), false);
+	assertEquals(deepCompare(boolean, false), false);
+	assertEquals(deepCompare(number, 0), false);
+	assertEquals(deepCompare(nullValue, undefined), false);
+	assertEquals(deepCompare(undefinedValue, null), false);
 
-	assertEquals(deepCompare(a, 'test'), true);
-	assertEquals(deepCompare(b, true), true);
-	assertEquals(deepCompare(c, 1), true);
-	assertEquals(deepCompare(d, null), true);
-	assertEquals(deepCompare(e, undefined), true);
+	assertEquals(deepCompare(string, 'foo'), true);
+	assertEquals(deepCompare(boolean, true), true);
+	assertEquals(deepCompare(number, 42), true);
+	assertEquals(deepCompare(nullValue, null), true);
+	assertEquals(deepCompare(undefinedValue, undefined), true);
 });
 
-Deno.test(`${green('[utils.ts]')} deepCompare ( Objects & Arrays )`, () => {
-	const a = [1, 'test', true, null, undefined];
-	const b = {
-		a: 1,
-		b: 'test',
-		c: true,
-		d: null,
-		e: undefined,
-	};
+Deno.test(`${green('[utils.ts]')} deepCompare (Objects & Arrays)`, () => {
+	const array = [1, 'test', true, null, undefined];
+	const object = { a: 1, b: 'test', c: true, d: null, e: undefined };
 
-	assertEquals(deepCompare(a, a), true);
-	assertEquals(deepCompare(b, b), true);
+	assertEquals(deepCompare(array, array), true);
+	assertEquals(deepCompare(object, object), true);
 
-	assertEquals(deepCompare(a, [1, 'test', true, null]), false);
-	assertEquals(
-		deepCompare(b, {
-			a: 1,
-			b: 'test',
-			c: true,
-			d: null,
-		}),
-		false
-	);
+	assertEquals(deepCompare(array, [1, 'test', true, null]), false);
+	assertEquals(deepCompare(object, { a: 1, b: 'test', c: true, d: null }), false);
 });
 
 Deno.test(`${green('[utils.ts]')} prepareArray`, () => {
-	const test: any = [1, 'text', true, undefined, null, new Date(), { test: null, test2: undefined, test3: [1, 2, 3], test4: new Map() }, [null, undefined, { test: new Map(), test2: undefined }]];
+	const array = [
+		1,
+		'bar',
+		true,
+		undefined,
+		null,
+		new Date(),
+		{ test: null, test2: undefined, test3: [1, 2, 3], test4: new Map() },
+		[null, undefined, { test: new Map(), test2: undefined }],
+	];
 
-	prepareArray(test);
-	assertEquals(test, [1, 'text', true, null, null, null, { test: null, test3: [1, 2, 3] }, [null, null, {}]]);
+	prepareArray(array);
+	assertEquals(array, [1, 'bar', true, null, null, null, { test: null, test3: [1, 2, 3] }, [null, null, {}]]);
 });
 
 Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
-	const test: any = {
+	const object: any = {
 		a: 1,
-		b: 'text',
+		b: 'foo',
 		c: true,
 		d: undefined,
 		e: null,
@@ -202,26 +190,25 @@ Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
 		g: [1, 2, undefined, new Date()],
 	};
 
-	prepareObject(test);
-	assertEquals(test, {
+	prepareObject(object);
+	assertEquals(object, {
 		a: 1,
-		b: 'text',
+		b: 'foo',
 		c: true,
 		e: null,
 		f: {},
 		g: [1, 2, null, null],
 	});
-
 });
 
 Deno.test(`${green('[utils.ts]')} isString`, () => {
-	assertEquals(isString('test'), true);
-	assertEquals(isString(123), false);
+	assertEquals(isString('foo'), true);
+	assertEquals(isString(42), false);
 	assertEquals(isString({}), false);
 });
 
 Deno.test(`${green('[utils.ts]')} isNumber`, () => {
-	assertEquals(isNumber(999), true);
+	assertEquals(isNumber(42), true);
 	assertEquals(isNumber(NaN), false);
 	assertEquals(isNumber({}), false);
 });
@@ -255,7 +242,7 @@ Deno.test(`${green('[utils.ts]')} isFunction`, () => {
 
 Deno.test(`${green('[utils.ts]')} isArray`, () => {
 	assertEquals(isArray([]), true);
-	assertEquals(isArray(1), false);
+	assertEquals(isArray(42), false);
 	assertEquals(isArray({}), false);
 });
 
@@ -266,14 +253,14 @@ Deno.test(`${green('[utils.ts]')} isObject`, () => {
 });
 
 Deno.test(`${green('[utils.ts]')} isRegExp`, () => {
-	assertEquals(isRegExp(/test/), true);
+	assertEquals(isRegExp(/foo/), true);
 	assertEquals(isRegExp(new Date()), false);
 	assertEquals(isRegExp({}), false);
 });
 
 Deno.test(`${green('[utils.ts]')} isError`, () => {
-	assertEquals(isError(new TypeError('test')), true);
-	assertEquals(isError(new Error('test')), true);
+	assertEquals(isError(new TypeError('foo')), true);
+	assertEquals(isError(new Error('foo')), true);
 	assertEquals(isError(345345), false);
 	assertEquals(isError({}), false);
 });

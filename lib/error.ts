@@ -1,9 +1,9 @@
-import { isError, isString } from './utils.ts';
+import { isString, isError } from './utils.ts';
 
 /**
  * Custom database error. 
  */
-export default class DatabaseError extends Error {
+export class DatabaseError extends Error {
   /** Error name. */
   public name: string = 'DatabaseError';
 

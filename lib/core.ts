@@ -24,13 +24,13 @@ import {
  * @param documents Array of documents to search.
  * @returns Found positions.
  */
-export function searchDocuments<Schema extends Document>(query: Query<Schema> | QueryFunction<Schema> | undefined, documents: Schema[]): number[] {
+export function searchDocuments(query: Query | QueryFunction | undefined, documents: Document[]): number[] {
 	let found: number[] = [];
 	let firstSearch: boolean = true;
 
 	if (isFunction(query)) {
 		for (let i = 0; i < documents.length; i++) {
-			const document: Schema = documents[i];
+			const document: Document = documents[i];
 			const isMatched: boolean = query(document);
 			if (isMatched) found.push(i);
 		}
@@ -38,17 +38,16 @@ export function searchDocuments<Schema extends Document>(query: Query<Schema> | 
 		return found;
 	}
 
-	if (documents.length === 0) return [];
-	if (isUndefined(query) || isObjectEmpty(query)) return numbersList(documents.length);
+	if (isUndefined(query) || isObjectEmpty(query)) return numbersList(documents.length - 1);
 
 	for (const key in query) {
-		const queryValue: QueryValue = query[key] as QueryValue;
+		const queryValue: QueryValue = query[key];
 
 		if (firstSearch) {
 			firstSearch = false;
 
 			for (let i = 0; i < documents.length; i++) {
-				const document: Schema = documents[i];
+				const document: Document = documents[i];
 				const documentValue: DocumentValue = document[key];
 				const isMatched: boolean = matchValues(queryValue, documentValue);
 				if (isMatched) found.push(i);
@@ -61,7 +60,7 @@ export function searchDocuments<Schema extends Document>(query: Query<Schema> | 
 		for (let i = 0; i < found.length; i++) {
 			if (isUndefined(found[i])) continue;
 			const position: number = found[i];
-			const document: Schema = documents[position];
+			const document: Document = documents[position];
 			const documentValue: DocumentValue = document[key];
 			const isMatched: boolean = matchValues(queryValue, documentValue);
 			if (isMatched) continue;
@@ -78,11 +77,11 @@ export function searchDocuments<Schema extends Document>(query: Query<Schema> | 
  * @param update The modifications to apply.
  * @returns New document with applyed updates.
  */
-export function updateDocument<Schema extends Document>(document: Schema, update: Update<Schema> | UpdateFunction<Schema>): Schema {
-	const documentClone: Schema = deepClone(document);
+export function updateDocument(document: Document, update: Update | UpdateFunction): Document {
+	const documentClone: Document = deepClone(document);
 
 	if (isFunction(update)) {
-		const newDocument: Schema = update(documentClone);
+		const newDocument: Document = update(documentClone);
 		if (!isObject(newDocument)) throw new TypeError('Document must be an object');
 
 		prepareObject(newDocument);
@@ -90,10 +89,15 @@ export function updateDocument<Schema extends Document>(document: Schema, update
 	}
 
 	for (const key in update) {
-		const value: UpdateValue = update[key] as UpdateValue;
-		const result: DocumentValue = isFunction(value) ? value(documentClone[key]) : (value as DocumentValue);
+		const value: UpdateValue = update[key];
+		const result: DocumentValue | undefined = isFunction(value) ? value(documentClone[key]) : value;
 
-		documentClone[key] = result as Schema[Extract<keyof Schema, string>];
+		if (isUndefined(result)) {
+			delete documentClone[key];
+			continue;
+		}
+		
+		documentClone[key] = result;
 	}
 
 	prepareObject(documentClone);

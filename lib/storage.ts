@@ -1,12 +1,12 @@
-import DatabaseError from './error.ts';
+import { DatabaseError } from './error.ts';
 import { DatabaseConfig, DataStorage, Document } from './types.ts';
-import { prepareObject, isUndefined, isArray, isNumber, isObject } from './utils.ts';
-import { writeFile, readFileSync, ensureFileSync, renameFile, fileExistsSync } from './files.ts';
+import { isUndefined, isArray, isNumber, isObject, getPathDirname, prepareObject } from './utils.ts';
 
 /**
  * Storage manager. Responsible for writing and reading data.
+ * The only file that contains platform specific code.
  */
-export default class Storage {
+export class Storage {
 	/** Next data for writing. */
 	private toWrite: Document[] | null = null;
 
@@ -19,7 +19,10 @@ export default class Storage {
 	/** Temporary file extension. */
 	private readonly extension: string = '.temp';
 
-	/** Storage initialization. */
+	/**
+	 * Storage initialization. 
+	 * @param config Database config.
+	 */
 	constructor(config: DatabaseConfig) {
 		this.config = config;
 	}
@@ -30,7 +33,7 @@ export default class Storage {
 	 */
 	public async write(documents: Document[]): Promise<void> {
 		try {
-			const { path, onlyInMemory, safeWrite } = this.config;
+			const { path, onlyInMemory } = this.config;
 			const file: string = path as string;
 
 			if (!path || onlyInMemory) return;
@@ -43,14 +46,10 @@ export default class Storage {
 			this.isLocked = true;
 
 			const encoded: string = this.encode(documents);
+			const tempFile: string = file + this.extension;
 
-			if (safeWrite) {
-				const tempFile: string = file + this.extension;
-				await writeFile(tempFile, encoded);
-				await renameFile(tempFile, file);
-			} else {
-				await writeFile(file, encoded);
-			}
+			await Deno.writeTextFile(tempFile, encoded);
+			await Deno.rename(tempFile, file);
 
 			this.isLocked = false;
 
@@ -73,12 +72,12 @@ export default class Storage {
 			const { path, schemaValidator } = this.config;
 
 			if (isUndefined(path)) return [];
-			if (fileExistsSync(path) === false) {
+			if (existsSync(path) === false) {
 				ensureFileSync(path, this.encode());
 				return [];
 			}
 
-			const fileContent: string = readFileSync(path).trim();
+			const fileContent: string = Deno.readTextFileSync(path).trim();
 			if (fileContent === '') return [];
 
 			const parsedFile: DataStorage = JSON.parse(fileContent);
@@ -114,5 +113,61 @@ export default class Storage {
 
 		const encoded: string = pretty ? JSON.stringify(data, null, '\t') : JSON.stringify(data);
 		return encoded;
+	}
+}
+
+/**
+ * Test whether or not the given path exists by checking with the file system
+ * @param path Path to the file.
+ * @returns Is file exists.
+ */
+function existsSync(path: string): boolean {
+	try {
+		Deno.lstatSync(path);
+		return true;
+	} catch (error) {
+		if (error instanceof Deno.errors.NotFound) return false;
+		throw error;
+	}
+}
+
+/**
+ * Ensures that the file exists synchronously.
+ * @param path Path to the file.
+ * @param data Data to write to if file not exists.
+ * @returns Is file created.
+ */
+function ensureFileSync(path: string, data: string = ''): void {
+	try {
+		const info = Deno.lstatSync(path);
+		if (!info.isFile) throw new Error('Invalid file specified');
+	} catch (error) {
+		if (error instanceof Deno.errors.NotFound) {
+			const dirname: string = getPathDirname(path);
+			ensureDirSync(dirname);
+			Deno.writeTextFileSync(path, data);
+			return;
+		}
+
+		throw error;
+	}
+}
+
+/**
+ * Ensures that the file directory synchronously.
+ * @param path Path to the directory.
+ * @returns Is directory created.
+ */
+function ensureDirSync(path: string): void {
+	try {
+		const info: Deno.FileInfo = Deno.lstatSync(path);
+		if (!info.isDirectory) throw new Error('Invalid directory specified');
+	} catch (error) {
+		if (error instanceof Deno.errors.NotFound) {
+			Deno.mkdirSync(path, { recursive: true });
+			return;
+		}
+
+		throw error;
 	}
 }

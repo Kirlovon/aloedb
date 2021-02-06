@@ -12,12 +12,6 @@ export interface DatabaseConfig {
 	immutable: boolean;
 
 	/**
-	 * Write data to the file without risk of loss.
-	 * Instead of simply writing data to a file, the data will be written to a temporary file, which will then be renamed the main file. ( Default: true )
-	 */
-	safeWrite: boolean;
-
-	/**
 	 * Do not write data to the database file.
 	 * If "path" specified, data will be read from the file, but new data will not be written.
 	 */
