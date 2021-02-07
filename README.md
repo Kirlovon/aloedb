@@ -1,5 +1,5 @@
 <p align="center">
-	<img src="https://raw.githubusercontent.com/Kirlovon/AloeDB/master/other/head.png" alt="Zoomtastic Logo" width="256">
+	<img src="https://raw.githubusercontent.com/Kirlovon/AloeDB/master/other/head.png" alt="AloeDB Logo" width="256">
 </p>
 
 <h3 align="center">AloeDB</h3>
