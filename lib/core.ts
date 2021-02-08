@@ -96,7 +96,7 @@ export function updateDocument(document: Document, update: Update | UpdateFuncti
 			delete documentClone[key];
 			continue;
 		}
-		
+
 		documentClone[key] = result;
 	}
 

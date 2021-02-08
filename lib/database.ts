@@ -8,7 +8,7 @@ import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunctio
  * # AloeDB 🌿
  * Light, Embeddable, NoSQL database for Deno
  * 
- * [Deno](https://deno.land/x/aloedb) | [Github](https://github.com/Kirlovon/AloeDB) | 
+ * [Deno](https://deno.land/x/aloedb) | [Github](https://github.com/Kirlovon/AloeDB)
  */
 export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
@@ -42,12 +42,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		if (isUndefined(config?.path) && isUndefined(config?.onlyInMemory)) config.onlyInMemory = true;
 		if (isString(config?.path) && isUndefined(config?.onlyInMemory)) config.onlyInMemory = false;
-		if (isUndefined(config?.path) && config?.onlyInMemory === false) {
-			throw new DatabaseError(
-				'Database initialization error',
-				'It is impossible to disable "onlyInMemory" mode if the "path" is not specified'
-			);
-		}
+		if (isUndefined(config?.path) && config?.onlyInMemory === false) throw new DatabaseError('Database initialization error', 'It is impossible to disable "onlyInMemory" mode if the "path" is not specified');
 
 		this.config = { ...this.config, ...config };
 		this.storage = new Storage(this.config);

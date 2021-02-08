@@ -232,10 +232,7 @@ Deno.test(`${green('[utils.ts]')} isNull`, () => {
 });
 
 Deno.test(`${green('[utils.ts]')} isFunction`, () => {
-	assertEquals(
-		isFunction(() => {}),
-		true
-	);
+	assertEquals(isFunction(() => { }), true);
 	assertEquals(isFunction(0), false);
 	assertEquals(isFunction({}), false);
 });
