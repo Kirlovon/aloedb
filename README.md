@@ -28,7 +28,7 @@ import { Database, Operators, Types } from 'https://deno.land/x/aloedb/mod.ts'
 
 ## Example
 ```typescript
-import { AloeDB } from 'https://deno.land/x/aloedb/mod.ts'
+import { Database } from 'https://deno.land/x/aloedb/mod.ts'
 
 // Structure of stored documents
 interface Film {
