@@ -5,10 +5,13 @@ export interface DatabaseConfig {
 	/** Path to the database file. */
 	path?: string;
 
-	/** Save data in easy-to-read format. ( Default: true ) */
+	/** Save data in easy-to-read format. _(Default: true)_ */
 	pretty: boolean;
 
-	/** Automatically deeply clone all returned objects. ( Default: true ) */
+	/** Automatically load the file synchronously when initializing the database. _(Default: true)_ */
+	autoload: boolean;
+
+	/** Automatically deeply clone all returned objects. _(Default: true)_ */
 	immutable: boolean;
 
 	/**
@@ -23,17 +26,6 @@ export interface DatabaseConfig {
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
 	 */
 	schemaValidator?: SchemaValidator;
-}
-
-/**
- * Database file structure.
- */
-export interface DataStorage {
-	/** Timestamp of the last data writing. */
-	timestamp: number;
-
-	/** Stored documents. */
-	documents: Document[];
 }
 
 /** Any object without specified structure. */

@@ -133,3 +133,23 @@ export function matchValues(queryValue: QueryValue, documentValue: DocumentValue
 
 	return false;
 }
+
+/**
+ * Parse database storage file.
+ * @param content Content of the file.
+ * @returns Array of documents.
+ */
+export function parseDatabaseStorage(content: string): Document[] {
+	const documents: any = JSON.parse(content);
+
+	if (!isArray(documents)) throw new TypeError('Database storage should be an array of objects');
+
+	for (let i = 0; i < documents.length; i++) {
+		const document: Document = documents[i];
+
+		if (!isObject(document)) throw new TypeError('Database storage should contain only objects');
+		prepareObject(document);
+	}
+
+	return documents;
+}

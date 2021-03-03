@@ -1,13 +1,14 @@
-import { Storage } from './storage.ts';
+import { Writer } from './writer.ts';
+import { Reader } from './reader.ts';
 import { DatabaseError } from './error.ts';
-import { searchDocuments, updateDocument } from './core.ts';
+import { searchDocuments, updateDocument, parseDatabaseStorage } from './core.ts';
 import { Document, DatabaseConfig, Query, QueryFunction, Update, UpdateFunction, Acceptable } from './types.ts';
 import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined } from './utils.ts';
 
 /**
  * # AloeDB 🌿
  * Light, Embeddable, NoSQL database for Deno
- * 
+ *
  * [Deno](https://deno.land/x/aloedb) | [Github](https://github.com/Kirlovon/AloeDB)
  */
 export class Database<Schema extends Acceptable<Schema> = Document> {
@@ -19,20 +20,21 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public documents: Schema[] = [];
 
-	/** Data storage manager. */
-	private readonly storage: Storage;
+	/** Data writing manager. */
+	private readonly writer?: Writer;
 
 	/** Database configuration. */
 	private readonly config: DatabaseConfig = {
 		path: undefined,
 		pretty: true,
+		autoload: true,
 		immutable: true,
 		onlyInMemory: true,
 		schemaValidator: undefined,
 	};
 
 	/**
-	 * Database initialization.
+	 * Create database collection to store documents.
 	 * @param config Database configuration.
 	 */
 	constructor(config?: Partial<DatabaseConfig> | string) {
@@ -45,8 +47,12 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (isUndefined(config?.path) && config?.onlyInMemory === false) throw new DatabaseError('Database initialization error', 'It is impossible to disable "onlyInMemory" mode if the "path" is not specified');
 
 		this.config = { ...this.config, ...config };
-		this.storage = new Storage(this.config);
-		this.documents = this.storage.read() as Schema[];
+
+		// Writer initialization
+		if (this.config.path) {
+			this.writer = new Writer(this.config.path)
+			if (this.config.autoload) this.loadSync();
+		}
 	}
 
 	/**
@@ -56,7 +62,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async insertOne(document: Schema): Promise<Schema> {
 		try {
-			const { immutable, schemaValidator } = this.config;
+			const { immutable, schemaValidator, onlyInMemory } = this.config;
 			if (!isObject(document)) throw new TypeError('Document must be an object');
 
 			prepareObject(document);
@@ -64,7 +70,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 			const internal: Schema = deepClone(document);
 			this.documents.push(internal);
-			await this.save();
+			if (!onlyInMemory) await this.save();
 
 			return immutable ? deepClone(internal) : internal;
 		} catch (error) {
@@ -79,7 +85,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async insertMany(documents: Schema[]): Promise<Schema[]> {
 		try {
-			const { immutable, schemaValidator } = this.config;
+			const { immutable, schemaValidator, onlyInMemory } = this.config;
 			if (!isArray(documents)) throw new TypeError('Input must be an array');
 
 			const inserted: Schema[] = [];
@@ -98,7 +104,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			}
 
 			this.documents = [...this.documents, ...inserted];
-			await this.save();
+			if (!onlyInMemory) await this.save();
 
 			return immutable ? deepClone(inserted) : inserted;
 		} catch (error) {
@@ -146,7 +152,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
 
 			// Optimization for empty queries
-			if (!isFunction(query) && (isUndefined(query) || isObjectEmpty(query))) {
+			if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) {
 				return immutable ? deepClone(this.documents) : [...this.documents];
 			}
 
@@ -175,7 +181,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>): Promise<Schema | null> {
 		try {
-			const { schemaValidator } = this.config;
+			const { schemaValidator, onlyInMemory } = this.config;
+
 			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
 			if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
@@ -189,7 +196,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			if (schemaValidator) schemaValidator(updated);
 
 			this.documents[position] = updated;
-			await this.save();
+			if (!onlyInMemory) await this.save();
 
 			return document;
 		} catch (error) {
@@ -205,7 +212,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>): Promise<Schema[]> {
 		try {
-			const { schemaValidator } = this.config;
+			const { schemaValidator, onlyInMemory } = this.config;
+
 			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
 			if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object');
 
@@ -226,7 +234,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			}
 
 			this.documents = temporary;
-			await this.save();
+			if (!onlyInMemory) await this.save();
 
 			return originals;
 		} catch (error) {
@@ -241,6 +249,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema | null> {
 		try {
+			const { onlyInMemory } = this.config;
+
 			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
 
 			const found: number[] = searchDocuments(query as Query, this.documents);
@@ -250,7 +260,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			const deleted: Schema = this.documents[position];
 
 			this.documents.splice(position, 1);
-			await this.save();
+			if (!onlyInMemory) await this.save();
 
 			return deleted;
 		} catch (error) {
@@ -265,6 +275,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema[]> {
 		try {
+			const { onlyInMemory } = this.config;
+
 			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
 
 			const found: number[] = searchDocuments(query as Query, this.documents);
@@ -284,7 +296,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			temporary = cleanArray(temporary);
 
 			this.documents = temporary;
-			await this.save();
+			if (!onlyInMemory) await this.save();
 
 			return deleted;
 		} catch (error) {
@@ -302,7 +314,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
 
 			// Optimization for empty queries
-			if (!isFunction(query) && (isUndefined(query) || isObjectEmpty(query))) return this.documents.length;
+			if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return this.documents.length;
 
 			const found: number[] = searchDocuments(query as Query, this.documents);
 			return found.length;
@@ -324,11 +336,67 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	}
 
 	/**
-	 * Write documents to the database file.
-	 * Called automatically after each insert, update or delete operation.
+	 * Load data from database storage file.
+	 */
+	public async load(): Promise<void> {
+		try {
+			const { path, schemaValidator } = this.config;
+			if (!path) return;
+
+			const content: string = await Reader.read(path);
+			const documents: Document[] = parseDatabaseStorage(content);
+
+			// Schema validation
+			if (schemaValidator) {
+				for (let i = 0; i < documents.length; i++) schemaValidator(documents[i])
+			}
+
+			this.documents = documents as Schema[];
+
+		} catch (error) {
+			throw new DatabaseError('Error loading documents', error);
+		}
+	}
+
+	/**
+	 * Load data from database storage file synchronously.
+	 */
+	public loadSync(): void {
+		try {
+			const { path, schemaValidator } = this.config;
+			if (!path) return;
+
+			const content: string = Reader.readSync(path);
+			const documents: Document[] = parseDatabaseStorage(content);
+
+			// Schema validation
+			if (schemaValidator) {
+				for (let i = 0; i < documents.length; i++) schemaValidator(documents[i])
+			}
+
+			this.documents = documents as Schema[];
+
+		} catch (error) {
+			throw new DatabaseError('Error loading documents', error);
+		}
+	}
+
+	/**
+	 * Write documents to the database storage file.
+	 * Called automatically after each insert, update or delete operation. _(Only if `onlyInMemory` mode disabled)_
 	 */
 	public async save(): Promise<void> {
-		if (this.config.onlyInMemory || isUndefined(this.config.path)) return;
-		this.storage.write(this.documents);
+		try {
+			if (!this.writer) return;
+
+			const encoded: string = this.config.pretty
+				? JSON.stringify(this.documents, null, '\t')
+				: JSON.stringify(this.documents);
+
+			this.writer.write(encoded);
+
+		} catch (error) {
+			throw new DatabaseError('Error saving documents', error);
+		}
 	}
 }

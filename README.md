@@ -9,15 +9,26 @@
     <b>Work in progress!</b>
 </p>
 
+<br>
+
 ## Features
 * ✨ Simple to use API, similar to [MongoDB](https://www.mongodb.com/)!
 * 🚀 Optimized for a large number of operations.
 * ⚖ No dependencies, even without [std](https://deno.land/std)!
 * 📁 Stores data in readable JSON file.
 
+<br>
+
+## Importing
+```typescript
+import { Database, Operators, Types } from 'https://deno.land/x/aloedb/mod.ts'
+```
+
+<br>
+
 ## Example
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts'
+import { AloeDB } from 'https://deno.land/x/aloedb/mod.ts'
 
 // Structure of stored documents
 interface Film {
@@ -25,15 +36,15 @@ interface Film {
     year: number;
     film: boolean;
     genres: string[];
-    authors: { director: string };
+    authors: { director: string };n
 }
 
 // Initialization
 const db = new Database<Film>('./path/to/the/file.json');
 
 // Insert operations
-await db.insertOne({ 
-    title: 'Drive', 
+await db.insertOne({
+    title: 'Drive',
     year: 2012,
     film: true,
     genres: ['crime', 'drama', 'noir'],
@@ -49,4 +60,3 @@ await db.updateOne({ title: 'Drive' }, { year: 2011 });
 // Delete operations
 await db.deleteOne({ title: 'Drive' });
 ```
-_P.S: More example can be found [here](https://github.com/Kirlovon/AloeDB/tree/master/examples)!_

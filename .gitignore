@@ -2,8 +2,8 @@
 .idea/
 .vscode/
 
-# Enviroment files for testing
-enviroment/
+# Temporary enviroment files for testing
+temp/
 
 # Scripts
 *.bat

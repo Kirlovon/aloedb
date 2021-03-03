@@ -1,7 +1,7 @@
-import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
+import { assertEquals, assertThrows } from 'https://deno.land/std/testing/asserts.ts';
 import { yellow } from 'https://deno.land/std/fmt/colors.ts';
 
-import { searchDocuments, updateDocument, matchValues } from '../lib/core.ts';
+import { searchDocuments, updateDocument, matchValues, parseDatabaseStorage } from '../lib/core.ts';
 
 Deno.test(`${yellow('[core.ts]')} searchDocuments (Single document)`, () => {
 	const documents: any = [{ object: { foo: 'bar' } }, { array: [1, 2, 3] }, { nothing: null }, { boolean: true }, { number: 42 }, { text: 'foo' }];
@@ -166,4 +166,21 @@ Deno.test(`${yellow('[core.ts]')} matchValues (Advanced Invalid)`, () => {
 	assertEquals(matchValues({ array: [1, 2, 3] }, { array: [1, 2, 3, 4] }), false);
 	assertEquals(matchValues({ invalid: new Map() as any }, { invalid: {} }), false);
 	assertEquals(matchValues({ array: [] }, { object: {} }), false);
+	assertEquals(matchValues(new Map() as any, new Map() as any), false);
+});
+
+
+
+
+Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage`, () => {
+	const result = parseDatabaseStorage('[{"foo":"bar"}]');
+	assertEquals(result, [{foo: 'bar'}]);
+});
+
+Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Not an Array)`, () => {
+	assertThrows(() => parseDatabaseStorage('true'), undefined, 'should be an array of objects')
+});
+
+Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Invalid Array)`, () => {
+	assertThrows(() => parseDatabaseStorage('[true]'), undefined, 'should contain only objects')
 });
