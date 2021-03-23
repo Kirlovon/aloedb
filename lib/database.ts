@@ -70,7 +70,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 			const internal: Schema = deepClone(document);
 			this.documents.push(internal);
-			if (!onlyInMemory) await this.save();
+			if (!onlyInMemory) this.save();
 
 			return immutable ? deepClone(internal) : internal;
 		} catch (error) {
@@ -104,7 +104,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			}
 
 			this.documents = [...this.documents, ...inserted];
-			if (!onlyInMemory) await this.save();
+			if (!onlyInMemory) this.save();
 
 			return immutable ? deepClone(inserted) : inserted;
 		} catch (error) {
@@ -196,7 +196,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			if (schemaValidator) schemaValidator(updated);
 
 			this.documents[position] = updated;
-			if (!onlyInMemory) await this.save();
+			if (!onlyInMemory) this.save();
 
 			return document;
 		} catch (error) {
@@ -234,7 +234,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			}
 
 			this.documents = temporary;
-			if (!onlyInMemory) await this.save();
+			if (!onlyInMemory) this.save();
 
 			return originals;
 		} catch (error) {
@@ -260,7 +260,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			const deleted: Schema = this.documents[position];
 
 			this.documents.splice(position, 1);
-			if (!onlyInMemory) await this.save();
+			if (!onlyInMemory) this.save();
 
 			return deleted;
 		} catch (error) {
@@ -296,7 +296,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			temporary = cleanArray(temporary);
 
 			this.documents = temporary;
-			if (!onlyInMemory) await this.save();
+			if (!onlyInMemory) this.save();
 
 			return deleted;
 		} catch (error) {
@@ -328,8 +328,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 */
 	public async drop(): Promise<void> {
 		try {
+			const { onlyInMemory } = this.config;
+
 			this.documents = [];
-			await this.save();
+			if (!onlyInMemory) this.save();
 		} catch (error) {
 			throw new DatabaseError('Error dropping database', error);
 		}
@@ -385,7 +387,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * Write documents to the database storage file.
 	 * Called automatically after each insert, update or delete operation. _(Only if `onlyInMemory` mode disabled)_
 	 */
-	public async save(): Promise<void> {
+	public save(): void {
 		try {
 			if (!this.writer) return;
 
@@ -393,6 +395,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 				? JSON.stringify(this.documents, null, '\t')
 				: JSON.stringify(this.documents);
 
+			// No need for await
 			this.writer.write(encoded);
 
 		} catch (error) {

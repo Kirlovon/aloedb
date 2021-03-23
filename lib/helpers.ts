@@ -5,39 +5,33 @@ import { isArray, isUndefined, isString, isNumber, isBoolean, isNull, isObject }
 /**
  * Selects documents where the value of a field more than specified number.
  * @param value
- * @example
- * ```typescript
- * db.documents; // [{ value: 5 }]
- * db.findOne({ value: moreThan(6) }); // null 
- * db.findOne({ value: moreThan(3) }); // { value: 5 } 
- * ```
  */
 export function moreThan(value: number) {
-	return (target: DocumentValue) => isNumber(target) && target > value;
+	return (target: Readonly<DocumentValue>) => isNumber(target) && target > value;
 }
 
 /**
  * Selects documents where the value of a field more than or equal to the specified number.
- * @param value 
+ * @param value
  */
 export function moreThanOrEqual(value: number) {
-	return (target: DocumentValue) => isNumber(target) && target >= value;
+	return (target: Readonly<DocumentValue>) => isNumber(target) && target >= value;
 }
 
 /**
  * Selects documents where the value of a field less than specified number.
- * @param value 
+ * @param value
  */
 export function lessThan(value: number) {
-	return (target: DocumentValue) => isNumber(target) && target < value;
+	return (target: Readonly<DocumentValue>) => isNumber(target) && target < value;
 }
 
 /**
  * Selects documents where the value of a field less than or equal to the specified number.
- * @param value 
+ * @param value
  */
 export function lessThanOrEqual(value: number) {
-	return (target: DocumentValue) => isNumber(target) && target <= value;
+	return (target: Readonly<DocumentValue>) => isNumber(target) && target <= value;
 }
 
 /**
@@ -46,7 +40,7 @@ export function lessThanOrEqual(value: number) {
  * @param max Range end.
  */
 export function between(min: number, max: number) {
-	return (target: DocumentValue) => isNumber(target) && target > min && target < max;
+	return (target: Readonly<DocumentValue>) => isNumber(target) && target > min && target < max;
 }
 
 /**
@@ -55,14 +49,14 @@ export function between(min: number, max: number) {
  * @param max Range end.
  */
 export function betweenOrEqual(min: number, max: number) {
-	return (target: DocumentValue) => isNumber(target) && target >= min && target <= max;
+	return (target: Readonly<DocumentValue>) => isNumber(target) && target >= min && target <= max;
 }
 
 /**
  * Matches if field exists.
  */
 export function exists() {
-	return (target: DocumentValue) => !isUndefined(target);
+	return (target?: Readonly<DocumentValue>) => !isUndefined(target);
 }
 
 /**
@@ -70,7 +64,7 @@ export function exists() {
  * @param type Type of the value.
  */
 export function type(type: 'string' | 'number' | 'boolean' | 'null' | 'array' | 'object') {
-	return (target: DocumentValue) => {
+	return (target: Readonly<DocumentValue>) => {
 		switch (type) {
 			case 'string':
 				return isString(target);
@@ -92,34 +86,34 @@ export function type(type: 'string' | 'number' | 'boolean' | 'null' | 'array' | 
 
 /**
  * Matches if array includes specified value.
- * @param value 
+ * @param value
  */
 export function includes(value: DocumentPrimitive) {
-	return (target: DocumentValue) => isArray(target) && target.includes(value);
+	return (target: Readonly<DocumentValue>) => isArray(target) && target.includes(value);
 }
 
 /**
  * Matches if array length equal to specified length.
- * @param length Length of the array. 
+ * @param length Length of the array.
  */
 export function length(length: number) {
-	return (target: DocumentValue) => isArray(target) && target.length === length;
+	return (target: Readonly<DocumentValue>) => isArray(target) && target.length === length;
 }
 
 /**
- * 
- * @param values 
+ *
+ * @param values
  */
 export function someElementMatch(...values: QueryValue[]) {
-	return (target: DocumentValue) => isArray(target) && target.some(targetValue => values.every(value => matchValues(value, targetValue)));
+	return (target: Readonly<DocumentValue>) => isArray(target) && target.some(targetValue => values.every(value => matchValues(value, targetValue)));
 }
 
 /**
- * 
- * @param values 
+ *
+ * @param values
  */
 export function everyElementMatch(...values: QueryValue[]) {
-	return (target: DocumentValue) => isArray(target) && target.every(targetValue => values.every(value => matchValues(value, targetValue)));
+	return (target: Readonly<DocumentValue>) => isArray(target) && target.every(targetValue => values.every(value => matchValues(value, targetValue)));
 }
 
 /**
@@ -127,7 +121,7 @@ export function everyElementMatch(...values: QueryValue[]) {
  * @param values Query values.
  */
 export function and(...values: QueryValue[]) {
-	return (target: DocumentValue) => values.every(value => matchValues(value, target));
+	return (target: Readonly<DocumentValue>) => values.every(value => matchValues(value, target  as DocumentValue));
 }
 
 /**
@@ -135,7 +129,7 @@ export function and(...values: QueryValue[]) {
  * @param values Query values.
  */
 export function or(...values: QueryValue[]) {
-	return (target: DocumentValue) => values.some(value => matchValues(value, target));
+	return (target: Readonly<DocumentValue>) => values.some(value => matchValues(value, target  as DocumentValue));
 }
 
 /**
@@ -143,5 +137,5 @@ export function or(...values: QueryValue[]) {
  * @param value Query value.
  */
 export function not(value: QueryValue) {
-	return (target: DocumentValue) => matchValues(value, target) === false;
+	return (target: Readonly<DocumentValue>) => matchValues(value, target as DocumentValue) === false;
 }

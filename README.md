@@ -5,30 +5,27 @@
 <h3 align="center">AloeDB</h3>
 <p align="center"><i>Light, Embeddable, NoSQL database for Deno</i></p>
 
-<p align="center">
-    <b>Work in progress!</b>
-</p>
 
 <br>
 
-## Features
-* ✨ Simple to use API, similar to [MongoDB](https://www.mongodb.com/)!
+## ✨ Features
+* 🎉 Simple to use API, similar to [MongoDB](https://www.mongodb.com/)!
 * 🚀 Optimized for a large number of operations.
 * ⚖ No dependencies, even without [std](https://deno.land/std)!
 * 📁 Stores data in readable JSON file.
 
 <br>
 
-## Importing
+## 📦 Importing
 ```typescript
-import { Database, Operators, Types } from 'https://deno.land/x/aloedb/mod.ts'
+import { Database } from 'https://deno.land/x/aloedb/mod.ts'
 ```
 
 <br>
 
-## Example
+## 📖 Example
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts'
+import { Database } from 'https://deno.land/x/aloedb/mod.ts';
 
 // Structure of stored documents
 interface Film {
@@ -36,7 +33,7 @@ interface Film {
     year: number;
     film: boolean;
     genres: string[];
-    authors: { director: string };n
+    authors: { director: string };
 }
 
 // Initialization
@@ -60,3 +57,39 @@ await db.updateOne({ title: 'Drive' }, { year: 2011 });
 // Delete operations
 await db.deleteOne({ title: 'Drive' });
 ```
+
+<br>
+
+## 🏃‍♂️ Benchmarks
+This database is not aimed at a heavily loaded backend, but its speed should be good enough for small APIs working with less than a million documents.
+
+To give you an example, here is the speed of a database operations with *1000* documents:
+
+| Insertion     | Searching     | Updating      | Deleting      |
+| ------------- | ------------- | ------------- | ------------- |
+| 15k _ops/sec_ | 65k _ops/sec_ | 8k _ops/sec_  | 10k _ops/sec_ |
+
+<!--
+
+<br>
+
+## 📚 Guide
+
+### Create Operations
+
+### Read Operations
+
+### Update Operations
+
+### Delete Operations
+
+<br>
+
+## 💡 Tips & Tricks
+
+<br>
+
+## 💚 Node.js Version
+
+-->
+
