@@ -117,6 +117,14 @@ export function everyElementMatch(...values: QueryValue[]) {
 }
 
 /**
+ * Selects documents where the value of a field matches a regular expression.
+ * @param value
+ */
+export function matchesRegex(expression: RegExp) {
+	return (target: Readonly<DocumentValue>) => isString(target) && expression.test(target);
+}
+
+/**
  * Logical AND operator. Selects documents where the value of a field equals to all specified values.
  * @param values Query values.
  */
