@@ -5,15 +5,15 @@
  * @param test Test to run
  */
  export async function RunBenchmark(name: string, iterations: number, test: (iteration: number) => Promise<void>): Promise<void> {
-	const testStart = Date.now();
+	const testStart = performance.now();
 	for(let i = 0; i < iterations; i++) await test(i);
-	const testEnd = Date.now();
+	const testEnd = performance.now();
 
 	const timeResult = testEnd - testStart;
 	const operationsCount = 1000 / (timeResult / iterations);
 	const formated = formatNumber(operationsCount);
 
-	console.log(`${name}: ${formated} ops/sec (${timeResult} ms)`);
+	console.log(`${name}: ${formated} ops/sec (${timeResult.toFixed(2)} ms)`);
 }
 
 /**

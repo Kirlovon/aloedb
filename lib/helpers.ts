@@ -1,10 +1,12 @@
+// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+
 import { matchValues } from './core.ts';
 import { DocumentValue, DocumentPrimitive, QueryValue } from './types.ts';
 import { isArray, isUndefined, isString, isNumber, isBoolean, isNull, isObject } from './utils.ts';
 
 /**
  * Selects documents where the value of a field more than specified number.
- * @param value
+ * @param value Comparison number.
  */
 export function moreThan(value: number) {
 	return (target: Readonly<DocumentValue>) => isNumber(target) && target > value;
@@ -12,7 +14,7 @@ export function moreThan(value: number) {
 
 /**
  * Selects documents where the value of a field more than or equal to the specified number.
- * @param value
+ * @param value Comparison number.
  */
 export function moreThanOrEqual(value: number) {
 	return (target: Readonly<DocumentValue>) => isNumber(target) && target >= value;
@@ -20,7 +22,7 @@ export function moreThanOrEqual(value: number) {
 
 /**
  * Selects documents where the value of a field less than specified number.
- * @param value
+ * @param value Comparison number.
  */
 export function lessThan(value: number) {
 	return (target: Readonly<DocumentValue>) => isNumber(target) && target < value;
@@ -28,7 +30,7 @@ export function lessThan(value: number) {
 
 /**
  * Selects documents where the value of a field less than or equal to the specified number.
- * @param value
+ * @param value Comparison number.
  */
 export function lessThanOrEqual(value: number) {
 	return (target: Readonly<DocumentValue>) => isNumber(target) && target <= value;
@@ -86,7 +88,7 @@ export function type(type: 'string' | 'number' | 'boolean' | 'null' | 'array' | 
 
 /**
  * Matches if array includes specified value.
- * @param value
+ * @param value Primitive value to search in array.
  */
 export function includes(value: DocumentPrimitive) {
 	return (target: Readonly<DocumentValue>) => isArray(target) && target.includes(value);
@@ -101,41 +103,41 @@ export function length(length: number) {
 }
 
 /**
- *
- * @param values
+ * Matches if at least one value in the array matches the given queries.
+ * @param queries Query values.
  */
-export function someElementMatch(...values: QueryValue[]) {
-	return (target: Readonly<DocumentValue>) => isArray(target) && target.some(targetValue => values.every(value => matchValues(value, targetValue)));
+export function someElementMatch(...queries: QueryValue[]) {
+	return (target: Readonly<DocumentValue>) => isArray(target) && target.some(targetValue => queries.every(query => matchValues(query, targetValue)));
 }
 
 /**
- *
- * @param values
+ * Matches if all the values in the array match in the given queries.
+ * @param queries Query values.
  */
-export function everyElementMatch(...values: QueryValue[]) {
-	return (target: Readonly<DocumentValue>) => isArray(target) && target.every(targetValue => values.every(value => matchValues(value, targetValue)));
+export function everyElementMatch(...queries: QueryValue[]) {
+	return (target: Readonly<DocumentValue>) => isArray(target) && target.every(targetValue => queries.every(query => matchValues(query, targetValue)));
 }
 
 /**
  * Logical AND operator. Selects documents where the value of a field equals to all specified values.
- * @param values Query values.
+ * @param queries Query values.
  */
-export function and(...values: QueryValue[]) {
-	return (target: Readonly<DocumentValue>) => values.every(value => matchValues(value, target  as DocumentValue));
+export function and(...queries: QueryValue[]) {
+	return (target: Readonly<DocumentValue>) => queries.every(query => matchValues(query, target as DocumentValue));
 }
 
 /**
  * Logical OR operator. Selects documents where the value of a field equals at least one specified value.
  * @param values Query values.
  */
-export function or(...values: QueryValue[]) {
-	return (target: Readonly<DocumentValue>) => values.some(value => matchValues(value, target  as DocumentValue));
+export function or(...queries: QueryValue[]) {
+	return (target: Readonly<DocumentValue>) => queries.some(query => matchValues(query, target as DocumentValue));
 }
 
 /**
  * Logical NOT operator. Selects documents where the value of a field not equal to specified value.
  * @param value Query value.
  */
-export function not(value: QueryValue) {
-	return (target: Readonly<DocumentValue>) => matchValues(value, target as DocumentValue) === false;
+export function not(query: QueryValue) {
+	return (target: Readonly<DocumentValue>) => matchValues(query, target as DocumentValue) === false;
 }

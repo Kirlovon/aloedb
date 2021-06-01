@@ -1,7 +1,12 @@
 import { assertEquals, assertThrows } from 'https://deno.land/std/testing/asserts.ts';
 import { yellow } from 'https://deno.land/std/fmt/colors.ts';
 
-import { searchDocuments, updateDocument, matchValues, parseDatabaseStorage } from '../lib/core.ts';
+import {
+	searchDocuments,
+	updateDocument,
+	matchValues,
+	parseDatabaseStorage
+} from '../lib/core.ts';
 
 Deno.test(`${yellow('[core.ts]')} searchDocuments (Single document)`, () => {
 	const documents: any = [{ object: { foo: 'bar' } }, { array: [1, 2, 3] }, { nothing: null }, { boolean: true }, { number: 42 }, { text: 'foo' }];
@@ -13,7 +18,7 @@ Deno.test(`${yellow('[core.ts]')} searchDocuments (Single document)`, () => {
 	const search5 = searchDocuments({ array: [1, 2, 3] }, documents);
 	const search6 = searchDocuments({ object: { foo: 'bar' } }, documents);
 	const search7 = searchDocuments({ text: /foo/ }, documents);
-	const search8 = searchDocuments({ number: (value) => value === 42 }, documents);
+	const search8 = searchDocuments({ number: (value: any) => value === 42 }, documents);
 
 	assertEquals(search1, [5]);
 	assertEquals(search2, [4]);
@@ -138,6 +143,39 @@ Deno.test(`${yellow('[core.ts]')} updateDocument (Update field function)`, () =>
 	assertEquals(updated, { test: 'foobar', test2: { value: 0 }, test3: [1, 2, 3, 4] });
 });
 
+Deno.test(`${yellow('[core.ts]')} updateDocument (Empty object)`, () => {
+	const updated = updateDocument(
+		{ test: true },
+		{ test: undefined }
+	);
+	assertEquals(updated, null);
+});
+
+Deno.test(`${yellow('[core.ts]')} updateDocument (Deletion)`, () => {
+	const updated = updateDocument(
+		{ test: true },
+		() => null
+	);
+	assertEquals(updated, null);
+});
+
+Deno.test(`${yellow('[core.ts]')} updateDocument (Immutability)`, () => {
+	const array: any = [1, 2, 3, { field: 'value' }];
+	const document = { test: [0], foo: 'bar' };
+
+	const updated = updateDocument(
+		document,
+		{ test: array }
+	);
+
+	array[0] = 999;
+	array[3].field = 'changed';
+	document.test[0] = 999;
+	document.foo = 'baz';
+
+	assertEquals(updated, { test: [1, 2, 3, { field: 'value' }], foo: 'bar' });
+});
+
 Deno.test(`${yellow('[core.ts]')} matchValues (Primitives)`, () => {
 	assertEquals(matchValues('foo', 'foo'), true);
 	assertEquals(matchValues(42, 42), true);
@@ -148,7 +186,7 @@ Deno.test(`${yellow('[core.ts]')} matchValues (Primitives)`, () => {
 
 Deno.test(`${yellow('[core.ts]')} matchValues (Advanced Valid)`, () => {
 	assertEquals(
-		matchValues(value => value === 'foo', 'foo'),
+		matchValues((value: any) => value === 'foo', 'foo'),
 		true
 	);
 	assertEquals(matchValues(/foo/, 'fooBar'), true);
@@ -160,7 +198,7 @@ Deno.test(`${yellow('[core.ts]')} matchValues (Advanced Invalid)`, () => {
 	assertEquals(matchValues('foo', 10), false);
 	assertEquals(matchValues(/bar/, true), false);
 	assertEquals(
-		matchValues(value => false, true),
+		matchValues((value: any) => false, true),
 		false
 	);
 	assertEquals(matchValues({ array: [1, 2, 3] }, { array: [1, 2, 3, 4] }), false);
@@ -170,11 +208,14 @@ Deno.test(`${yellow('[core.ts]')} matchValues (Advanced Invalid)`, () => {
 });
 
 
-
-
 Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage`, () => {
-	const result = parseDatabaseStorage('[{"foo":"bar"}]');
+	const result = parseDatabaseStorage('[{"foo":"bar"}, {}]');
 	assertEquals(result, [{foo: 'bar'}]);
+});
+
+Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Empty file)`, () => {
+	const result = parseDatabaseStorage('');
+	assertEquals(result, []);
 });
 
 Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Not an Array)`, () => {

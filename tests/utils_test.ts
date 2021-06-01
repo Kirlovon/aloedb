@@ -20,8 +20,7 @@ import {
 	isFunction,
 	isArray,
 	isObject,
-	isRegExp,
-	isError,
+	isRegExp
 } from '../lib/utils.ts';
 
 Deno.test(`${green('[utils.ts]')} cleanArray`, () => {
@@ -253,11 +252,4 @@ Deno.test(`${green('[utils.ts]')} isRegExp`, () => {
 	assertEquals(isRegExp(/foo/), true);
 	assertEquals(isRegExp(new Date()), false);
 	assertEquals(isRegExp({}), false);
-});
-
-Deno.test(`${green('[utils.ts]')} isError`, () => {
-	assertEquals(isError(new TypeError('foo')), true);
-	assertEquals(isError(new Error('foo')), true);
-	assertEquals(isError(345345), false);
-	assertEquals(isError({}), false);
 });

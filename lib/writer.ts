@@ -1,3 +1,5 @@
+// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+
 /**
  * Data writing manager.
  * Uses atomic writing and prevents race condition.
@@ -16,43 +18,47 @@ export class Writer {
 	/** Temporary file extension. */
 	private readonly extension: string = '.temp';
 
-	 /**
-	  * Storage initialization.
-	  * @param path Path to the database file.
-	  * @param pretty Write data in easy-to-read format.
-	  */
+	/**
+	 * Storage initialization.
+	 * @param path Path to the database file.
+	 */
 	constructor(path: string) {
 		this.path = path;
 	}
 
-	 /**
-	  * Write data to the database file.
-	  * @param data Data to write.
-	  */
-	public async write(data: string): Promise<void> {
-
-		// Add writing to the queue if writing is locked
+	/**
+	 * Add data to the writing queue.
+	 * Do not call this method with `await`, otherwise the result of this method will be identical to the `write()` method.
+	 *
+	 * @param data Data to add to the queue.
+	 */
+	public async add(data: string): Promise<void> {
 		if (this.locked) {
 			this.next = data;
 			return;
 		}
 
-		// Lock writing
-		this.locked = true;
+		try {
+			this.locked = true;
+			await this.write(data);
+		} finally {
+			this.locked = false;
+		}
 
-		// Write data
-		const temp: string = this.path + this.extension;
-		await Deno.writeTextFile(temp, data);
-		await Deno.rename(temp, this.path);
-
-		// Unlock writing
-		this.locked = false;
-
-		// Start next writing if there is data in the queue
 		if (this.next) {
 			const nextCopy: string = this.next;
 			this.next = null;
-			this.write(nextCopy);
+			this.add(nextCopy);
 		}
+	}
+
+	/**
+	  * Write data to the database file.
+	  * @param data Data to write.
+	  */
+	public async write(data: string): Promise<void> {
+		const temp: string = this.path + this.extension;
+		await Deno.writeTextFile(temp, data);
+		await Deno.rename(temp, this.path);
 	}
 }

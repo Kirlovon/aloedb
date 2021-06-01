@@ -1,4 +1,15 @@
-import { Document, DocumentValue, Query, QueryFunction, QueryValue, Update, UpdateFunction, UpdateValue } from './types.ts';
+// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+
+import {
+	Document,
+	DocumentValue,
+	Query,
+	QueryValue,
+	QueryFunction,
+	Update,
+	UpdateValue,
+	UpdateFunction,
+} from './types.ts';
 
 import {
 	cleanArray,
@@ -75,33 +86,34 @@ export function searchDocuments(query: Query | QueryFunction | undefined, docume
  * Create new document applying modifications to specified document.
  * @param document Document to update.
  * @param update The modifications to apply.
- * @returns New document with applyed updates.
+ * @returns New document with applyed updates or null.
  */
-export function updateDocument(document: Document, update: Update | UpdateFunction): Document {
-	const documentClone: Document = deepClone(document);
+export function updateDocument(document: Document, update: Update | UpdateFunction): Document | null {
+	let newDocument: Document | null = deepClone(document);
 
 	if (isFunction(update)) {
-		const newDocument: Document = update(documentClone);
+		newDocument = update(newDocument);
+		if (!newDocument) return null;
 		if (!isObject(newDocument)) throw new TypeError('Document must be an object');
 
-		prepareObject(newDocument);
-		return newDocument;
-	}
+	} else {
+		for (const key in update) {
+			const value: UpdateValue = update[key];
+			const result: DocumentValue | undefined = isFunction(value) ? value(newDocument[key]) : value;
 
-	for (const key in update) {
-		const value: UpdateValue = update[key];
-		const result: DocumentValue | undefined = isFunction(value) ? value(documentClone[key]) : value;
+			if (isUndefined(result)) {
+				delete newDocument[key];
+				continue;
+			}
 
-		if (isUndefined(result)) {
-			delete documentClone[key];
-			continue;
+			newDocument[key] = result;
 		}
-
-		documentClone[key] = result;
 	}
 
-	prepareObject(documentClone);
-	return documentClone;
+	prepareObject(newDocument);
+	if (isObjectEmpty(newDocument)) return null;
+
+	return deepClone(newDocument);
 }
 
 /**
@@ -140,16 +152,18 @@ export function matchValues(queryValue: QueryValue, documentValue: DocumentValue
  * @returns Array of documents.
  */
 export function parseDatabaseStorage(content: string): Document[] {
-	const documents: any = JSON.parse(content);
+	const trimmed: string = content.trim();
+	if (trimmed === '') return [];
 
+	const documents: any = JSON.parse(trimmed);
 	if (!isArray(documents)) throw new TypeError('Database storage should be an array of objects');
 
 	for (let i = 0; i < documents.length; i++) {
 		const document: Document = documents[i];
-
 		if (!isObject(document)) throw new TypeError('Database storage should contain only objects');
 		prepareObject(document);
+		if (isObjectEmpty(document)) delete documents[i];
 	}
 
-	return documents;
+	return cleanArray(documents);
 }

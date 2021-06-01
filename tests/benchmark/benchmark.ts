@@ -5,7 +5,7 @@ import { RunBenchmark } from './utils.ts';
 const TEMP_FILE: string = './temp_benchmark_db.json';
 
 // Initialization
-const db = new Database({ onlyInMemory: false, immutable: true, path: TEMP_FILE, pretty: true  });
+const db = new Database({ path: TEMP_FILE, autosave: true, immutable: true, pretty: false, optimize: true  });
 
 // Running insertion operations
 await RunBenchmark('Insertion', 1000, async (iteration) => {

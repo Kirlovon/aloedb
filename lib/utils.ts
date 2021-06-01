@@ -1,4 +1,9 @@
-import { PlainObject } from './types.ts';
+// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+
+/** Any object without specified structure. */
+interface PlainObject {
+	[key: string]: unknown;
+}
 
 /**
  * Remove all empty items from the array.
@@ -260,13 +265,4 @@ export function isObject(target: unknown): target is PlainObject {
  */
 export function isRegExp(target: unknown): target is RegExp {
 	return target instanceof RegExp;
-}
-
-/**
- * Checks whether the value is an error.
- * @param target Target to check.
- * @returns Result of checking.
- */
-export function isError(target: unknown): target is Error {
-	return target instanceof Error;
 }

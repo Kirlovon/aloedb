@@ -1,3 +1,5 @@
+// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+
 import { isUndefined, getPathDirname } from './utils.ts';
 
 /**

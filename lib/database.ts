@@ -1,6 +1,7 @@
+// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+
 import { Writer } from './writer.ts';
 import { Reader } from './reader.ts';
-import { DatabaseError } from './error.ts';
 import { searchDocuments, updateDocument, parseDatabaseStorage } from './core.ts';
 import { Document, DatabaseConfig, Query, QueryFunction, Update, UpdateFunction, Acceptable } from './types.ts';
 import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined } from './utils.ts';
@@ -16,7 +17,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * In-Memory documents storage.
 	 *
 	 * ***WARNING:*** It is better not to modify these documents manually, as the changes will not pass the necessary checks.
-	 * ***However, if you modify storage manualy, call the method `db.save()` to save your changes.***
+	 * ***However, if you modify storage manualy, call the method `await db.save()` to save your changes.***
 	 */
 	public documents: Schema[] = [];
 
@@ -28,24 +29,25 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		path: undefined,
 		pretty: true,
 		autoload: true,
+		autosave: true,
+		optimize: true,
 		immutable: true,
-		onlyInMemory: true,
-		schemaValidator: undefined,
+		validator: undefined
 	};
 
 	/**
 	 * Create database collection to store documents.
-	 * @param config Database configuration.
+	 * @param config Database configuration or path to the database file.
 	 */
 	constructor(config?: Partial<DatabaseConfig> | string) {
-		if (isUndefined(config)) config = { onlyInMemory: true };
-		if (isString(config)) config = { path: config, onlyInMemory: false };
-		if (!isObject(config)) throw new DatabaseError('Database initialization error', 'Config must be an object');
+		if (isUndefined(config)) config = { autoload: false, autosave: false };
+		if (isString(config)) config = { path: config, autoload: true, autosave: true };
+		if (!isObject(config)) throw new TypeError('Config must be an object or a string');
 
-		if (isUndefined(config?.path) && isUndefined(config?.onlyInMemory)) config.onlyInMemory = true;
-		if (isString(config?.path) && isUndefined(config?.onlyInMemory)) config.onlyInMemory = false;
-		if (isUndefined(config?.path) && config?.onlyInMemory === false) throw new DatabaseError('Database initialization error', 'It is impossible to disable "onlyInMemory" mode if the "path" is not specified');
+		// Disable autosave if path is not specified
+		if (isUndefined(config?.path)) config.autosave = false;
 
+		// Merge default config with users config
 		this.config = { ...this.config, ...config };
 
 		// Writer initialization
@@ -61,21 +63,18 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @returns Inserted document.
 	 */
 	public async insertOne(document: Schema): Promise<Schema> {
-		try {
-			const { immutable, schemaValidator, onlyInMemory } = this.config;
-			if (!isObject(document)) throw new TypeError('Document must be an object');
+		const { immutable, validator, autosave } = this.config;
+		if (!isObject(document)) throw new TypeError('Document must be an object');
 
-			prepareObject(document);
-			if (schemaValidator) schemaValidator(document);
+		prepareObject(document);
+		if (isObjectEmpty(document)) return {} as Schema;
+		if (validator) validator(document);
 
-			const internal: Schema = deepClone(document);
-			this.documents.push(internal);
-			if (!onlyInMemory) this.save();
+		const internal: Schema = deepClone(document);
+		this.documents.push(internal);
+		if (autosave) await this.save();
 
-			return immutable ? deepClone(internal) : internal;
-		} catch (error) {
-			throw new DatabaseError('Error inserting document', error);
-		}
+		return immutable ? deepClone(internal) : internal;
 	}
 
 	/**
@@ -84,32 +83,27 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @returns Array of inserted documents.
 	 */
 	public async insertMany(documents: Schema[]): Promise<Schema[]> {
-		try {
-			const { immutable, schemaValidator, onlyInMemory } = this.config;
-			if (!isArray(documents)) throw new TypeError('Input must be an array');
+		const { immutable, validator, autosave } = this.config;
+		if (!isArray(documents)) throw new TypeError('Input must be an array');
 
-			const inserted: Schema[] = [];
+		const inserted: Schema[] = [];
 
-			for (let i = 0; i < documents.length; i++) {
-				const document: Schema = documents[i];
-				if (!isObject(document)) {
-					throw new TypeError('Documents must be an objects');
-				}
+		for (let i = 0; i < documents.length; i++) {
+			const document: Schema = documents[i];
+			if (!isObject(document)) throw new TypeError('Documents must be an objects');
 
-				prepareObject(document);
-				if (schemaValidator) schemaValidator(document);
+			prepareObject(document);
+			if (isObjectEmpty(document)) continue;
+			if (validator) validator(document);
 
-				const internal: Schema = deepClone(document);
-				inserted.push(internal);
-			}
-
-			this.documents = [...this.documents, ...inserted];
-			if (!onlyInMemory) this.save();
-
-			return immutable ? deepClone(inserted) : inserted;
-		} catch (error) {
-			throw new DatabaseError('Error inserting documents', error);
+			const internal: Schema = deepClone(document);
+			inserted.push(internal);
 		}
+
+		this.documents = [...this.documents, ...inserted];
+		if (autosave) await this.save();
+
+		return immutable ? deepClone(inserted) : inserted;
 	}
 
 	/**
@@ -118,27 +112,23 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @returns Found document.
 	 */
 	public async findOne(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema | null> {
-		try {
-			const { immutable } = this.config;
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
+		const { immutable } = this.config;
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-			// Optimization for empty queries
-			if (!isFunction(query) && (isUndefined(query) || isObjectEmpty(query))) {
-				if (this.documents.length === 0) return null;
-				const document: Schema = this.documents[0];
-				return immutable ? deepClone(document) : document;
-			}
-
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			if (found.length === 0) return null;
-
-			const position: number = found[0];
-			const document: Schema = this.documents[position];
-
+		// Optimization for empty queries
+		if (!isFunction(query) && (isUndefined(query) || isObjectEmpty(query))) {
+			if (this.documents.length === 0) return null;
+			const document: Schema = this.documents[0];
 			return immutable ? deepClone(document) : document;
-		} catch (error) {
-			throw new DatabaseError('Error searching document', error);
 		}
+
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		if (found.length === 0) return null;
+
+		const position: number = found[0];
+		const document: Schema = this.documents[position];
+
+		return immutable ? deepClone(document) : document;
 	}
 
 	/**
@@ -147,161 +137,152 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @returns Found documents.
 	 */
 	public async findMany(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema[]> {
-		try {
-			const { immutable } = this.config;
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
+		const { immutable } = this.config;
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-			// Optimization for empty queries
-			if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) {
-				return immutable ? deepClone(this.documents) : [...this.documents];
-			}
-
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			if (found.length === 0) return [];
-
-			const documents: Schema[] = [];
-
-			for (let i = 0; i < found.length; i++) {
-				const position: number = found[i];
-				const document: Schema = this.documents[position];
-				documents.push(document);
-			}
-
-			return immutable ? deepClone(documents) : documents;
-		} catch (error) {
-			throw new DatabaseError('Error searching document', error);
+		// Optimization for empty queries
+		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) {
+			return immutable ? deepClone(this.documents) : [...this.documents];
 		}
+
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		if (found.length === 0) return [];
+
+		const documents: Schema[] = [];
+
+		for (let i = 0; i < found.length; i++) {
+			const position: number = found[i];
+			const document: Schema = this.documents[position];
+			documents.push(document);
+		}
+
+		return immutable ? deepClone(documents) : documents;
 	}
 
 	/**
-	 * Modifies an existing document.
+	 * Modifies an existing document that match search query.
 	 * @param query Document selection criteria.
 	 * @param update The modifications to apply.
-	 * @returns Original document that has been modified.
+	 * @returns Found document with applied modifications.
 	 */
 	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>): Promise<Schema | null> {
-		try {
-			const { schemaValidator, onlyInMemory } = this.config;
+		const { validator, autosave, immutable } = this.config;
 
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
-			if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			if (found.length === 0) return null;
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		if (found.length === 0) return null;
 
-			const position: number = found[0];
-			const document: Schema = this.documents[position];
+		const position: number = found[0];
+		const document: Schema = this.documents[position];
+		const updated: Schema | null = updateDocument(document, update as Update) as Schema | null;
 
-			const updated: Schema = updateDocument(document, update as Update) as Schema;
-			if (schemaValidator) schemaValidator(updated);
-
-			this.documents[position] = updated;
-			if (!onlyInMemory) this.save();
-
-			return document;
-		} catch (error) {
-			throw new DatabaseError('Error updating document', error);
+		if (!updated) {
+			this.documents.splice(position, 1);
+			return {} as Schema;
 		}
+
+		if (validator) validator(updated);
+
+		this.documents[position] = updated;
+		if (autosave) await this.save();
+
+		return immutable ? deepClone(updated) : updated;
 	}
 
 	/**
 	 * Modifies all documents that match search query.
 	 * @param query Documents selection criteria.
 	 * @param update The modifications to apply.
-	 * @returns Original documents that has been modified.
+	 * @returns Found documents with applied modifications.
 	 */
 	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>): Promise<Schema[]> {
-		try {
-			const { schemaValidator, onlyInMemory } = this.config;
+		const { validator, autosave, immutable } = this.config;
 
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
-			if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object');
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			if (found.length === 0) return [];
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		if (found.length === 0) return [];
 
-			let temporary: Schema[] = [...this.documents];
-			const originals: Schema[] = [];
+		let temporary: Schema[] = [...this.documents];
+		let deleted: boolean = false;
+		const updatedDocuments: Schema[] = [];
 
-			for (let i = 0; i < found.length; i++) {
-				const position: number = found[i];
-				const document: Schema = temporary[position];
-				const updated: Schema = updateDocument(document, update as Update | UpdateFunction) as Schema;
-				if (schemaValidator) schemaValidator(updated);
+		for (let i = 0; i < found.length; i++) {
+			const position: number = found[i];
+			const document: Schema = temporary[position];
+			const updated: Schema | null = updateDocument(document, update as Update | UpdateFunction) as Schema | null;
 
-				temporary[position] = updated;
-				originals.push(document);
+			if (!updated) {
+				deleted = true;
+				delete temporary[position];
+				continue;
 			}
 
-			this.documents = temporary;
-			if (!onlyInMemory) this.save();
+			if (validator) validator(updated);
 
-			return originals;
-		} catch (error) {
-			throw new DatabaseError('Error updating documents', error);
+			temporary[position] = updated;
+			updatedDocuments.push(updated);
 		}
+
+		this.documents = deleted ? cleanArray(temporary) : temporary;
+		if (autosave) await this.save();
+
+		return immutable ? deepClone(updatedDocuments) : updatedDocuments;
 	}
 
 	/**
-	 * Delete one document.
+	 * Deletes first found document that matches the search query.
 	 * @param query Document selection criteria.
 	 * @returns Deleted document.
 	 */
 	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema | null> {
-		try {
-			const { onlyInMemory } = this.config;
+		const { autosave } = this.config;
 
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			if (found.length === 0) return null;
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		if (found.length === 0) return null;
 
-			const position: number = found[0];
-			const deleted: Schema = this.documents[position];
+		const position: number = found[0];
+		const deleted: Schema = this.documents[position];
 
-			this.documents.splice(position, 1);
-			if (!onlyInMemory) this.save();
+		this.documents.splice(position, 1);
+		if (autosave) await this.save();
 
-			return deleted;
-		} catch (error) {
-			throw new DatabaseError('Error deleting documents', error);
-		}
+		return deleted;
 	}
 
 	/**
-	 * Delete many documents.
+	 * Deletes all documents that matches the search query.
 	 * @param query Document selection criteria.
 	 * @returns Array of deleted documents.
 	 */
 	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema[]> {
-		try {
-			const { onlyInMemory } = this.config;
+		const { autosave } = this.config;
 
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			if (found.length === 0) return [];
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		if (found.length === 0) return [];
 
-			let temporary: Schema[] = [...this.documents];
-			const deleted: Schema[] = [];
+		let temporary: Schema[] = [...this.documents];
+		const deleted: Schema[] = [];
 
-			for (let i = 0; i < found.length; i++) {
-				const position: number = found[i];
-				const document: Schema = temporary[position];
+		for (let i = 0; i < found.length; i++) {
+			const position: number = found[i];
+			const document: Schema = temporary[position];
 
-				deleted.push(document);
-				delete temporary[position];
-			}
-
-			temporary = cleanArray(temporary);
-
-			this.documents = temporary;
-			if (!onlyInMemory) this.save();
-
-			return deleted;
-		} catch (error) {
-			throw new DatabaseError('Error deleting documents', error);
+			deleted.push(document);
+			delete temporary[position];
 		}
+
+		this.documents = cleanArray(temporary);
+		if (autosave) await this.save();
+
+		return deleted;
 	}
 
 	/**
@@ -310,96 +291,74 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @returns Documents count.
 	 */
 	public async count(query?: Query<Schema> | QueryFunction<Schema>): Promise<number> {
-		try {
-			if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Search query must be an object or function');
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-			// Optimization for empty queries
-			if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return this.documents.length;
+		// Optimization for empty queries
+		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return this.documents.length;
 
-			const found: number[] = searchDocuments(query as Query, this.documents);
-			return found.length;
-		} catch (error) {
-			throw new DatabaseError('Error counting documents', error);
-		}
+		const found: number[] = searchDocuments(query as Query, this.documents);
+		return found.length;
 	}
 
 	/**
 	 * Delete all documents.
 	 */
 	public async drop(): Promise<void> {
-		try {
-			const { onlyInMemory } = this.config;
-
-			this.documents = [];
-			if (!onlyInMemory) this.save();
-		} catch (error) {
-			throw new DatabaseError('Error dropping database', error);
-		}
+		this.documents = [];
+		if (this.config.autosave) await this.save();
 	}
 
 	/**
-	 * Load data from database storage file.
+	 * Load data from storage file.
 	 */
 	public async load(): Promise<void> {
-		try {
-			const { path, schemaValidator } = this.config;
-			if (!path) return;
+		const { path, validator } = this.config;
+		if (!path) return;
 
-			const content: string = await Reader.read(path);
-			const documents: Document[] = parseDatabaseStorage(content);
+		const content: string = await Reader.read(path);
+		const documents: Document[] = parseDatabaseStorage(content);
 
-			// Schema validation
-			if (schemaValidator) {
-				for (let i = 0; i < documents.length; i++) schemaValidator(documents[i])
-			}
-
-			this.documents = documents as Schema[];
-
-		} catch (error) {
-			throw new DatabaseError('Error loading documents', error);
+		// Schema validation
+		if (validator) {
+			for (let i = 0; i < documents.length; i++) validator(documents[i])
 		}
+
+		this.documents = documents as Schema[];
 	}
 
 	/**
-	 * Load data from database storage file synchronously.
+	 * Synchronously load data from storage file.
 	 */
 	public loadSync(): void {
-		try {
-			const { path, schemaValidator } = this.config;
-			if (!path) return;
+		const { path, validator } = this.config;
+		if (!path) return;
 
-			const content: string = Reader.readSync(path);
-			const documents: Document[] = parseDatabaseStorage(content);
+		const content: string = Reader.readSync(path);
+		const documents: Document[] = parseDatabaseStorage(content);
 
-			// Schema validation
-			if (schemaValidator) {
-				for (let i = 0; i < documents.length; i++) schemaValidator(documents[i])
-			}
-
-			this.documents = documents as Schema[];
-
-		} catch (error) {
-			throw new DatabaseError('Error loading documents', error);
+		// Schema validation
+		if (validator) {
+			for (let i = 0; i < documents.length; i++) validator(documents[i])
 		}
+
+		this.documents = documents as Schema[];
 	}
 
 	/**
 	 * Write documents to the database storage file.
-	 * Called automatically after each insert, update or delete operation. _(Only if `onlyInMemory` mode disabled)_
+	 * Called automatically after each insert, update or delete operation. _(Only if `autosave` mode enabled)_
 	 */
-	public save(): void {
-		try {
-			if (!this.writer) return;
+	public async save(): Promise<void> {
+		if (!this.writer) return;
 
-			const encoded: string = this.config.pretty
-				? JSON.stringify(this.documents, null, '\t')
-				: JSON.stringify(this.documents);
+		const encoded: string = this.config.pretty
+			? JSON.stringify(this.documents, null, '\t')
+			: JSON.stringify(this.documents);
 
-			// No need for await
-			this.writer.write(encoded);
-
-		} catch (error) {
-			throw new DatabaseError('Error saving documents', error);
+		if (this.config.optimize) {
+			this.writer.add(encoded); // Should be without await
+		} else {
+			await this.writer.write(encoded);
 		}
 	}
 }
