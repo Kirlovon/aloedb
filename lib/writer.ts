@@ -1,5 +1,7 @@
 // Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
 
+import { Document } from './types.ts';
+
 /**
  * Data writing manager.
  * Uses atomic writing and prevents race condition.
@@ -7,7 +9,7 @@
 export class Writer {
 
 	/** Next data for writing. */
-	private next: string | null = null;
+	private next: Document[] | null = null;
 
 	/** Lock writing. */
 	private locked: boolean = false;
@@ -27,38 +29,42 @@ export class Writer {
 	}
 
 	/**
-	 * Add data to the writing queue.
+	 * Batch data writing.
 	 * Do not call this method with `await`, otherwise the result of this method will be identical to the `write()` method.
 	 *
-	 * @param data Data to add to the queue.
+	 * @param documents Array with documents to write.
+	 * @param pretty Write data in easy-to-read format.
 	 */
-	public async add(data: string): Promise<void> {
+	public async batchWrite(documents: Document[], pretty: boolean): Promise<void> {
 		if (this.locked) {
-			this.next = data;
+			this.next = documents;
 			return;
 		}
 
 		try {
 			this.locked = true;
-			await this.write(data);
+			await this.write(documents, pretty);
 		} finally {
 			this.locked = false;
 		}
 
 		if (this.next) {
-			const nextCopy: string = this.next;
+			const nextCopy = this.next;
 			this.next = null;
-			this.add(nextCopy);
+			this.batchWrite(nextCopy, pretty);
 		}
 	}
 
 	/**
 	  * Write data to the database file.
-	  * @param data Data to write.
+	  * @param documents Array with documents to write.
+	  * @param pretty Write data in easy-to-read format.
 	  */
-	public async write(data: string): Promise<void> {
+	public async write(documents: Document[], pretty: boolean): Promise<void> {
 		const temp: string = this.path + this.extension;
-		await Deno.writeTextFile(temp, data);
+		const encoded: string = pretty ? JSON.stringify(documents, null, '\t') : JSON.stringify(documents);
+
+		await Deno.writeTextFile(temp, encoded);
 		await Deno.rename(temp, this.path);
 	}
 }

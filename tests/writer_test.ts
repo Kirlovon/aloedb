@@ -22,7 +22,7 @@ Deno.test({
 	async fn() {
 		const writer = new Writer(TEMP_PATH + '/test_storage_1.json');
 
-		await writer.write('[{"foo":"bar"}]');
+		await writer.write([{ foo: 'bar' }], false);
 
 		const content = await Deno.readTextFile(TEMP_PATH + '/test_storage_1.json');
 		assertEquals(content, '[{"foo":"bar"}]');
@@ -30,15 +30,15 @@ Deno.test({
 });
 
 Deno.test({
-	name: `${red('[writer.ts]')} Add`,
+	name: `${red('[writer.ts]')} Batch write`,
 	sanitizeResources: false,
 	sanitizeOps: false,
 
 	async fn() {
 		const writer = new Writer(TEMP_PATH + '/test_storage_2.json');
 
-		writer.add('[{"foo":"old"}]');
-		writer.add('[{"foo":"new"}]');
+		writer.batchWrite([{ foo: 'old' }], false);
+		writer.batchWrite([{ foo: 'new' }], false);
 
 		await delay(100);
 

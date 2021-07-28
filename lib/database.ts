@@ -9,14 +9,15 @@ import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunctio
 // * Version 1.0:
 // * Searching for single document
 // * Refactor internal types
+// * Rename optimize to batching
+// * JSON stringify during batching for speedup
 
-// TODO: Rename optimize to batching, add batching timing configuration
-// TODO: JSON stringify during batching for speedup
+// TODO: Indexing
 // TODO: Before Writing & After Reading configuration
 // TODO: Config with skip, limit, sort, immutable
+// TODO: Make documents storage read only
 // TODO: Finish testing
 // TODO: Examples
-// TODO: Indexing (Optional)
 
 /**
  * # AloeDB 🌿
@@ -42,7 +43,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		pretty: true,
 		autoload: true,
 		autosave: true,
-		optimize: true,
+		batching: true,
 		immutable: true,
 		validator: undefined
 	};
@@ -64,7 +65,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		// Writer initialization
 		if (this.config.path) {
-			this.writer = new Writer(this.config.path)
+			this.writer = new Writer(this.config.path);
 			if (this.config.autoload) this.loadSync();
 		}
 	}
@@ -356,14 +357,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	public async save(): Promise<void> {
 		if (!this.writer) return;
 
-		const encoded: string = this.config.pretty
-			? JSON.stringify(this.documents, null, '\t')
-			: JSON.stringify(this.documents);
-
-		if (this.config.optimize) {
-			this.writer.add(encoded); // Should be without await
+		if (this.config.batching) {
+			this.writer.batchWrite(this.documents, this.config.pretty); // Should be without await
 		} else {
-			await this.writer.write(encoded);
+			await this.writer.write(this.documents, this.config.pretty);
 		}
 	}
 }

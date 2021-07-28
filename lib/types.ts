@@ -26,7 +26,7 @@ export interface DatabaseConfig {
 	 * Optimize writing using batching. If enabled, the data will be written many times faster in case of a large number of operations.
 	 * Disable it if you want the methods to be considered executed only when the data is written to a file. _(Default: true)_
 	 */
-	optimize: boolean | number;
+	batching: boolean | number;
 
 	/**
 	 * Runtime documents validation function.

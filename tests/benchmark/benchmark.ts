@@ -8,11 +8,11 @@ const IDS: string[] = [];
 for (let i = 0; i < ITERATIONS; i++) IDS.push(randomID());
 
 // Initialization
-const db = new Database({ path: TEMP_FILE, autosave: true, immutable: true, pretty: false, optimize: true });
+const db = new Database({ path: TEMP_FILE, autosave: true, immutable: true, pretty: true, batching: true });
 
 // Running insertion operations
 await RunBenchmark('Insertion', ITERATIONS, async (iteration) => {
-	await db.insertOne({ foo: IDS[iteration] });
+	await db.insertOne({ foo: IDS[iteration], i: iteration });
 });
 
 // Running searching operations

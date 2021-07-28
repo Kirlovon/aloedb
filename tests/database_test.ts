@@ -167,7 +167,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/insertOne_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/insertOne_test.json', pretty: false, batching: false });
 
 		const inserted = await db.insertOne({ foo: 'bar' });
 		assertEquals(db.documents, [{ foo: 'bar' }]);
@@ -184,7 +184,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/insertOne_empty_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/insertOne_empty_test.json', pretty: false, batching: false });
 
 		const inserted = await db.insertOne({});
 		assertEquals(db.documents, []);
@@ -201,7 +201,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/insertMany_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/insertMany_test.json', pretty: false, batching: false });
 
 		const inserted = await db.insertMany([{ foo: 'bar' }, { bar: 'foo' }, {},]);
 		assertEquals(db.documents, [{ foo: 'bar' }, { bar: 'foo' }]);
@@ -218,7 +218,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/insertMany_empty_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/insertMany_empty_test.json', pretty: false, batching: false });
 
 		const inserted = await db.insertMany([{}, {},]);
 		assertEquals(db.documents, []);
@@ -235,7 +235,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/findOne_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/findOne_test.json', pretty: false, batching: false });
 
 		const initialData = [
 			{ id: 1, text: 'one', boolean: true, empty: null, array: [1], object: {} },
@@ -277,7 +277,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/findMany_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/findMany_test.json', pretty: false, batching: false });
 
 		const initialData = [
 			{ id: 1, text: 'one', boolean: true, empty: null, array: [1], object: {} },
@@ -319,7 +319,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/updateOne_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/updateOne_test.json', pretty: false, batching: false });
 
 		const initialData = [
 			{ id: 1, text: 'one', boolean: true, empty: null, array: [1], object: {} },
@@ -368,7 +368,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ pretty: false, optimize: false });
+		const db = new Database({ pretty: false, batching: false });
 
 		const amount1 = await db.count();
 		await db.insertOne({ foo: 'bar' });
@@ -389,7 +389,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const db = new Database({ path: TEMP_PATH + '/drop_test.json', pretty: false, optimize: false });
+		const db = new Database({ path: TEMP_PATH + '/drop_test.json', pretty: false, batching: false });
 
 		await db.insertMany([
 			{ id: 1 },
