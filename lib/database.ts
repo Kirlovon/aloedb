@@ -7,14 +7,15 @@ import { Document, DatabaseConfig, Query, QueryFunction, Update, UpdateFunction,
 import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined, isNull } from './utils.ts';
 
 // * Version 1.0:
-// Searching for single document
-// TODO: Examples
-// TODO: Finish testing
-// TODO: Refactor internal types
-// TODO: Config with skip, limit, sort, immutable
-// TODO: Before Writing & After Reading configuration
-// TODO: JSON stringify during batching for speedup
+// * Searching for single document
+// * Refactor internal types
+
 // TODO: Rename optimize to batching, add batching timing configuration
+// TODO: JSON stringify during batching for speedup
+// TODO: Before Writing & After Reading configuration
+// TODO: Config with skip, limit, sort, immutable
+// TODO: Finish testing
+// TODO: Examples
 // TODO: Indexing (Optional)
 
 /**
@@ -78,8 +79,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isObject(document)) throw new TypeError('Document must be an object');
 
 		prepareObject(document);
-		if (isObjectEmpty(document)) return {} as Schema;
 		if (validator) validator(document);
+		if (isObjectEmpty(document)) return {} as Schema;
 
 		const internal: Schema = deepClone(document);
 		this.documents.push(internal);
@@ -104,8 +105,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			if (!isObject(document)) throw new TypeError('Documents must be an objects');
 
 			prepareObject(document);
-			if (isObjectEmpty(document)) continue;
 			if (validator) validator(document);
+			if (isObjectEmpty(document)) continue;
 
 			const internal: Schema = deepClone(document);
 			inserted.push(internal);
@@ -126,7 +127,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		const { immutable } = this.config;
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-		const found: number | null = findOneDocument(query as Query, this.documents);
+		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
 
 		const position: number = found;
@@ -149,7 +150,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			return immutable ? deepClone(this.documents) : [...this.documents];
 		}
 
-		const found: number[] = findMultipleDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
 
 		const documents: Schema[] = [];
@@ -175,19 +176,19 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-		const found: number | null = findOneDocument(query as Query, this.documents);
+		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
 
 		const position: number = found;
 		const document: Schema = this.documents[position];
-		const updated: Schema | null = updateDocument(document, update as Update) as Schema | null;
+		const updated: Schema = updateDocument<Schema>(document, update);
 
-		if (!updated) {
+		if (validator) validator(updated);
+
+		if (isObjectEmpty(updated)) {
 			this.documents.splice(position, 1);
 			return {} as Schema;
 		}
-
-		if (validator) validator(updated);
 
 		this.documents[position] = updated;
 		if (autosave) await this.save();
@@ -207,7 +208,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-		const found: number[] = findMultipleDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
 
 		const temporary: Schema[] = [...this.documents];
@@ -217,15 +218,15 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		for (let i = 0; i < found.length; i++) {
 			const position: number = found[i];
 			const document: Schema = temporary[position];
-			const updated: Schema | null = updateDocument(document, update as Update | UpdateFunction) as Schema | null;
+			const updated: Schema = updateDocument<Schema>(document, update);
 
-			if (!updated) {
+			if (validator) validator(updated);
+
+			if (isObjectEmpty(updated)) {
 				deleted = true;
 				delete temporary[position];
 				continue;
 			}
-
-			if (validator) validator(updated);
 
 			temporary[position] = updated;
 			updatedDocuments.push(updated);
@@ -247,7 +248,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-		const found: number | null = findOneDocument(query as Query, this.documents);
+		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
 
 		const position: number = found;
@@ -269,7 +270,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-		const found: number[] = findMultipleDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
 
 		const temporary: Schema[] = [...this.documents];
@@ -300,7 +301,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		// Optimization for empty queries
 		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return this.documents.length;
 
-		const found: number[] = findMultipleDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		return found.length;
 	}
 

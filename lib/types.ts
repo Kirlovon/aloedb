@@ -33,7 +33,7 @@ export interface DatabaseConfig {
 	 * If the document does not pass the validation, just throw the error.
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
 	 */
-	validator?: (document: Readonly<any>) => void;
+	validator?: (document: any) => void;
 }
 
 /** Checking the object for storage suitability. */
@@ -54,17 +54,17 @@ export type DocumentPrimitive = string | number | boolean | null;
 /** Documents selection criteria. */
 export type Query<T extends Document = Document> = { [K in keyof T]?: QueryValue<T[K]> };
 
-/** Manual вocuments selection function. */
-export type QueryFunction<T extends Document = Document> = (document: Readonly<T>) => boolean;
-
 /** Possible search query values. */
 export type QueryValue<T extends DocumentValue = DocumentValue> = DocumentValue | ((value: Readonly<T>) => boolean) | RegExp | undefined;
+
+/** Manual вocuments selection function. */
+export type QueryFunction<T extends Document = Document> = (document: Readonly<T>) => boolean;
 
 /** The modifications to apply. */
 export type Update<T extends Document = Document> = { [K in keyof T]?: UpdateValue<T[K]> };
 
-/** Manual modifications applying. */
-export type UpdateFunction<T extends Document = Document> = (document: T) => T | null;
-
 /** Possible update values. */
 export type UpdateValue<T extends DocumentValue = DocumentValue> = T | ((value: T) => T) | undefined;
+
+/** Manual modifications applying. */
+export type UpdateFunction<T extends Document = Document> = (document: T) => T | null;

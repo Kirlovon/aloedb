@@ -33,11 +33,11 @@ import {
  * @param documents Array of documents to search.
  * @returns Found document index.
  */
-export function findOneDocument(query: Query | QueryFunction | undefined, documents: Document[]): number | null {
+export function findOneDocument<T extends Document>(query: Query<T> | QueryFunction<T> | undefined, documents: T[]): number | null {
 	if (isFunction(query)) {
 		for (let i = 0; i < documents.length; i++) {
-			const document: Document = documents[i];
-			const isMatched: boolean = query(document);
+			const document = documents[i];
+			const isMatched = query(document);
 			if (isMatched) return i;
 		}
 
@@ -49,13 +49,13 @@ export function findOneDocument(query: Query | QueryFunction | undefined, docume
 	}
 
 	for (let i = 0; i < documents.length; i++) {
-		const document: Document = documents[i];
-		let suitable: boolean = true;
+		const document = documents[i];
+		let suitable = true;
 
 		for (const key in query) {
-			const documentValue: DocumentValue = document[key];
-			const queryValue: QueryValue = query[key];
-			const isMatched: boolean = matchValues(queryValue, documentValue);
+			const documentValue = document[key];
+			const queryValue = query[key];
+			const isMatched = matchValues(queryValue as QueryValue, documentValue);
 			if (isMatched) continue;
 
 			suitable = false;
@@ -74,14 +74,14 @@ export function findOneDocument(query: Query | QueryFunction | undefined, docume
  * @param documents Array of documents to search.
  * @returns Found documents indexes.
  */
-export function findMultipleDocuments(query: Query | QueryFunction | undefined, documents: Document[]): number[] {
-	let found: number[] = [];
-	let firstSearch: boolean = true;
+export function findMultipleDocuments<T extends Document>(query: Query<T> | QueryFunction<T> | undefined, documents: T[]): number[] {
+	let found = [];
+	let firstSearch = true;
 
 	if (isFunction(query)) {
 		for (let i = 0; i < documents.length; i++) {
-			const document: Document = documents[i];
-			const isMatched: boolean = query(document);
+			const document = documents[i];
+			const isMatched = query(document);
 			if (isMatched) found.push(i);
 		}
 
@@ -91,15 +91,15 @@ export function findMultipleDocuments(query: Query | QueryFunction | undefined, 
 	if (isUndefined(query) || isObjectEmpty(query)) return numbersList(documents.length - 1);
 
 	for (const key in query) {
-		const queryValue: QueryValue = query[key];
+		const queryValue = query[key];
 
 		if (firstSearch) {
 			firstSearch = false;
 
 			for (let i = 0; i < documents.length; i++) {
-				const document: Document = documents[i];
-				const documentValue: DocumentValue = document[key];
-				const isMatched: boolean = matchValues(queryValue, documentValue);
+				const document = documents[i];
+				const documentValue = document[key];
+				const isMatched = matchValues(queryValue as QueryValue, documentValue);
 				if (isMatched) found.push(i);
 			}
 
@@ -109,10 +109,10 @@ export function findMultipleDocuments(query: Query | QueryFunction | undefined, 
 
 		for (let i = 0; i < found.length; i++) {
 			if (isUndefined(found[i])) continue;
-			const position: number = found[i];
-			const document: Document = documents[position];
-			const documentValue: DocumentValue = document[key];
-			const isMatched: boolean = matchValues(queryValue, documentValue);
+			const position = found[i];
+			const document = documents[position];
+			const documentValue = document[key];
+			const isMatched = matchValues(queryValue as QueryValue, documentValue);
 			if (isMatched) continue;
 			delete found[i];
 		}
@@ -122,36 +122,30 @@ export function findMultipleDocuments(query: Query | QueryFunction | undefined, 
 }
 
 /**
- * Create new document applying modifications to specified document.
+ * Create new document with applyed modifications.
  * @param document Document to update.
  * @param update The modifications to apply.
  * @returns New document with applied updates or null if document should be deleted.
  */
-export function updateDocument(document: Document, update: Update | UpdateFunction): Document | null {
-	let newDocument: Document | null = deepClone(document);
+export function updateDocument<T extends Document>(document: T, update: Update<T> | UpdateFunction<T>): T {
+	let newDocument: T | null = deepClone(document);
 
 	if (isFunction(update)) {
 		newDocument = update(newDocument);
-		if (!newDocument) return null;
+		if (!newDocument) return {} as T;
 		if (!isObject(newDocument)) throw new TypeError('Document must be an object');
 
 	} else {
 		for (const key in update) {
-			const value: UpdateValue = update[key];
-			const result: DocumentValue | undefined = isFunction(value) ? value(newDocument[key]) : value;
+			const value = update[key];
 
-			if (isUndefined(result)) {
-				delete newDocument[key];
-				continue;
-			}
-
-			newDocument[key] = result;
+			newDocument[key] = isFunction(value)
+				? value(newDocument[key])
+				: value as T[Extract<keyof T, string>];
 		}
 	}
 
 	prepareObject(newDocument);
-	if (isObjectEmpty(newDocument)) return null;
-
 	return deepClone(newDocument);
 }
 
@@ -191,14 +185,14 @@ export function matchValues(queryValue: QueryValue, documentValue: DocumentValue
  * @returns Array of documents.
  */
 export function parseDatabaseStorage(content: string): Document[] {
-	const trimmed: string = content.trim();
+	const trimmed = content.trim();
 	if (trimmed === '') return [];
 
-	const documents: any = JSON.parse(trimmed);
+	const documents = JSON.parse(trimmed);
 	if (!isArray(documents)) throw new TypeError('Database storage should be an array of objects');
 
 	for (let i = 0; i < documents.length; i++) {
-		const document: Document = documents[i];
+		const document = documents[i];
 		if (!isObject(document)) throw new TypeError('Database storage should contain only objects');
 		prepareObject(document);
 		if (isObjectEmpty(document)) delete documents[i];
