@@ -12,6 +12,7 @@ import {
 	deepCompare,
 	prepareArray,
 	prepareObject,
+	isPrimitive,
 	isString,
 	isNumber,
 	isBoolean,
@@ -198,6 +199,17 @@ Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
 		f: {},
 		g: [1, 2, null, null],
 	});
+});
+
+Deno.test(`${green('[utils.ts]')} isPrimitive`, () => {
+	assertEquals(isPrimitive('foo'), true);
+	assertEquals(isPrimitive(42), true);
+	assertEquals(isPrimitive(false), true);
+	assertEquals(isPrimitive(null), true);
+	assertEquals(isPrimitive({}), false);
+	assertEquals(isPrimitive([]), false);
+	assertEquals(isPrimitive(undefined), false);
+	assertEquals(isPrimitive(/foo/), false);
 });
 
 Deno.test(`${green('[utils.ts]')} isString`, () => {

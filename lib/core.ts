@@ -15,11 +15,9 @@ import {
 	cleanArray,
 	deepClone,
 	deepCompare,
+	isPrimitive,
 	isArray,
-	isBoolean,
 	isFunction,
-	isNull,
-	isNumber,
 	isObject,
 	isObjectEmpty,
 	isRegExp,
@@ -164,7 +162,7 @@ export function updateDocument(document: Document, update: Update | UpdateFuncti
  * @returns Are the values equal.
  */
 export function matchValues(queryValue: QueryValue, documentValue: DocumentValue): boolean {
-	if (isString(queryValue) || isNumber(queryValue) || isBoolean(queryValue) || isNull(queryValue)) {
+	if (isPrimitive(queryValue)) {
 		return queryValue === documentValue;
 	}
 

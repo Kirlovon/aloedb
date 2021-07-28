@@ -1,5 +1,7 @@
 // Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
 
+import { DocumentPrimitive } from './types.ts';
+
 /** Any object without specified structure. */
 interface PlainObject {
 	[key: string]: unknown;
@@ -137,7 +139,7 @@ export function prepareObject(target: PlainObject): void {
 	for (const key in target) {
 		const value: unknown = target[key];
 
-		if (isString(value) || isNumber(value) || isBoolean(value) || isNull(value)) {
+		if (isPrimitive(value)) {
 			continue;
 		}
 
@@ -163,7 +165,7 @@ export function prepareArray(target: unknown[]): void {
 	for (let i = 0; i < target.length; i++) {
 		const value: unknown = target[i];
 
-		if (isString(value) || isNumber(value) || isBoolean(value) || isNull(value)) {
+		if (isPrimitive(value)) {
 			continue;
 		}
 
@@ -184,6 +186,16 @@ export function prepareArray(target: unknown[]): void {
 
 		target[i] = null;
 	}
+}
+
+/**
+ * Checks whether the value is a primitive.
+ * @param target Target to check.
+ * @returns Result of checking.
+ */
+ export function isPrimitive(target: unknown): target is DocumentPrimitive {
+	const type = typeof target;
+	return type === 'string' || type === 'number' || type === 'boolean' || target === null;
 }
 
 /**

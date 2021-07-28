@@ -11,11 +11,10 @@ import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunctio
 // TODO: Examples
 // TODO: Finish testing
 // TODO: Refactor internal types
-// TODO: JSON stringify during batching for speedup
 // TODO: Config with skip, limit, sort, immutable
 // TODO: Before Writing & After Reading configuration
+// TODO: JSON stringify during batching for speedup
 // TODO: Rename optimize to batching, add batching timing configuration
-// TODO: Stringified objects caching (Optional)
 // TODO: Indexing (Optional)
 
 /**
