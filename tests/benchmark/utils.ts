@@ -4,9 +4,9 @@
  * @param iterations Amount of iterations
  * @param test Test to run
  */
- export async function RunBenchmark(name: string, iterations: number, test: (iteration: number) => Promise<void>): Promise<void> {
+export async function RunBenchmark(name: string, iterations: number, test: (iteration: number) => Promise<void>): Promise<void> {
 	const testStart = performance.now();
-	for(let i = 0; i < iterations; i++) await test(i);
+	for (let i = 0; i < iterations; i++) await test(i);
 	const testEnd = performance.now();
 
 	const timeResult = testEnd - testStart;
@@ -22,7 +22,23 @@
  * @returns Formated number
  */
 export function formatNumber(number: number): string {
-	if (number >= 1000000) return (number/1000000).toFixed(1) + 'M';
-	if (number >= 1000) return (number/1000).toFixed(1) + 'K';
+	if (number >= 1000000) return (number / 1000000).toFixed(1) + 'M';
+	if (number >= 1000) return (number / 1000).toFixed(1) + 'K';
 	return number.toFixed(1);
 }
+
+/**
+ * Generate random ID
+ * @param length Length of the id
+ * @returns Random id
+ */
+export function randomID(length: number = 32): string {
+	const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
+	let result = '';
+
+	for (let i = 0; i < length; i++) {
+		result += characters.charAt(Math.floor(Math.random() * characters.length));
+	}
+
+	return result;
+};

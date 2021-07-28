@@ -1,9 +1,9 @@
-import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
-import { ensureDir, emptyDir } from 'https://deno.land/std/fs/mod.ts';
-import { delay } from 'https://deno.land/std/async/mod.ts';
+import { assertEquals } from 'https://deno.land/std@0.102.0/testing/asserts.ts';
+import { ensureDir, emptyDir } from 'https://deno.land/std@0.102.0/fs/mod.ts';
+import { delay } from 'https://deno.land/std@0.102.0/async/mod.ts';
 
-import { red } from 'https://deno.land/std/fmt/colors.ts';
-import { dirname, fromFileUrl } from 'https://deno.land/std/path/mod.ts';
+import { red } from 'https://deno.land/std@0.102.0/fmt/colors.ts';
+import { dirname, fromFileUrl } from 'https://deno.land/std@0.102.0/path/mod.ts';
 
 import { Writer } from '../lib/writer.ts';
 

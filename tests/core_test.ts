@@ -1,24 +1,81 @@
-import { assertEquals, assertThrows } from 'https://deno.land/std/testing/asserts.ts';
-import { yellow } from 'https://deno.land/std/fmt/colors.ts';
+import { assertEquals, assertThrows } from 'https://deno.land/std@0.102.0/testing/asserts.ts';
+import { yellow } from 'https://deno.land/std@0.102.0/fmt/colors.ts';
 
 import {
-	searchDocuments,
+	findOneDocument,
+	findMultipleDocuments,
 	updateDocument,
 	matchValues,
 	parseDatabaseStorage
 } from '../lib/core.ts';
 
-Deno.test(`${yellow('[core.ts]')} searchDocuments (Single document)`, () => {
+Deno.test(`${yellow('[core.ts]')} findOneDocument (Single document)`, () => {
 	const documents: any = [{ object: { foo: 'bar' } }, { array: [1, 2, 3] }, { nothing: null }, { boolean: true }, { number: 42 }, { text: 'foo' }];
 
-	const search1 = searchDocuments({ text: 'foo' }, documents);
-	const search2 = searchDocuments({ number: 42 }, documents);
-	const search3 = searchDocuments({ boolean: true }, documents);
-	const search4 = searchDocuments({ nothing: null }, documents);
-	const search5 = searchDocuments({ array: [1, 2, 3] }, documents);
-	const search6 = searchDocuments({ object: { foo: 'bar' } }, documents);
-	const search7 = searchDocuments({ text: /foo/ }, documents);
-	const search8 = searchDocuments({ number: (value: any) => value === 42 }, documents);
+	const search1 = findOneDocument({ text: 'foo' }, documents);
+	const search2 = findOneDocument({ number: 42 }, documents);
+	const search3 = findOneDocument({ boolean: true }, documents);
+	const search4 = findOneDocument({ nothing: null }, documents);
+	const search5 = findOneDocument({ array: [1, 2, 3] }, documents);
+	const search6 = findOneDocument({ object: { foo: 'bar' } }, documents);
+	const search7 = findOneDocument({ text: /foo/ }, documents);
+	const search8 = findOneDocument({ number: (value: any) => value === 42 }, documents);
+
+	assertEquals(search1, 5);
+	assertEquals(search2, 4);
+	assertEquals(search3, 3);
+	assertEquals(search4, 2);
+	assertEquals(search5, 1);
+	assertEquals(search6, 0);
+	assertEquals(search7, 5);
+	assertEquals(search8, 4);
+});
+
+Deno.test(`${yellow('[core.ts]')} findOneDocument (No criteria)`, () => {
+	const documents: any = [
+		{ text: 'foo' },
+		{ text: 'bar' },
+		{ text: 'baz' },
+	];
+
+	const search1 = findOneDocument({}, documents);
+	const search2 = findOneDocument(undefined, documents);
+	const search3 = findOneDocument({}, []);
+	const search4 = findOneDocument(undefined, []);
+
+	assertEquals(search1, 0);
+	assertEquals(search2, 0);
+	assertEquals(search3, null);
+	assertEquals(search4, null);
+});
+
+Deno.test(`${yellow('[core.ts]')} findOneDocument (Search function)`, () => {
+	const documents: any = [
+		{ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3], object: { foo: 'bar' } },
+		{ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3] },
+		{ text: 'foo', number: 42, boolean: true, nothing: 0 },
+	];
+
+	const search1 = findOneDocument(() => true, documents);
+	const search2 = findOneDocument(() => false, documents);
+	const search3 = findOneDocument((value: any) => value?.nothing === 0, documents);
+
+	assertEquals(search1, 0);
+	assertEquals(search2, null);
+	assertEquals(search3, 2);
+});
+
+Deno.test(`${yellow('[core.ts]')} findMultipleDocuments (Single document)`, () => {
+	const documents: any = [{ object: { foo: 'bar' } }, { array: [1, 2, 3] }, { nothing: null }, { boolean: true }, { number: 42 }, { text: 'foo' }];
+
+	const search1 = findMultipleDocuments({ text: 'foo' }, documents);
+	const search2 = findMultipleDocuments({ number: 42 }, documents);
+	const search3 = findMultipleDocuments({ boolean: true }, documents);
+	const search4 = findMultipleDocuments({ nothing: null }, documents);
+	const search5 = findMultipleDocuments({ array: [1, 2, 3] }, documents);
+	const search6 = findMultipleDocuments({ object: { foo: 'bar' } }, documents);
+	const search7 = findMultipleDocuments({ text: /foo/ }, documents);
+	const search8 = findMultipleDocuments({ number: (value: any) => value === 42 }, documents);
 
 	assertEquals(search1, [5]);
 	assertEquals(search2, [4]);
@@ -30,7 +87,7 @@ Deno.test(`${yellow('[core.ts]')} searchDocuments (Single document)`, () => {
 	assertEquals(search8, [4]);
 });
 
-Deno.test(`${yellow('[core.ts]')} searchDocuments (Multiple documents)`, () => {
+Deno.test(`${yellow('[core.ts]')} findMultipleDocuments (Multiple documents)`, () => {
 	const documents: any = [
 		{ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3], object: { foo: 'bar' } },
 		{ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3] },
@@ -40,14 +97,14 @@ Deno.test(`${yellow('[core.ts]')} searchDocuments (Multiple documents)`, () => {
 		{ text: 'foo' },
 	];
 
-	const search1 = searchDocuments({ text: 'foo' }, documents);
-	const search2 = searchDocuments({ text: 'foo', number: 42 }, documents);
-	const search3 = searchDocuments({ text: 'foo', number: 42, boolean: true }, documents);
-	const search4 = searchDocuments({ text: 'foo', number: 42, boolean: true, nothing: null }, documents);
-	const search5 = searchDocuments({ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3] }, documents);
-	const search6 = searchDocuments({ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3], object: { foo: 'bar' } }, documents);
-	const search7 = searchDocuments({ text: /foo/, array: (value: any) => value?.[0] === 1 }, documents);
-	const search8 = searchDocuments({ text: /foo/, object: (value: any) => value?.foo === 'bar' }, documents);
+	const search1 = findMultipleDocuments({ text: 'foo' }, documents);
+	const search2 = findMultipleDocuments({ text: 'foo', number: 42 }, documents);
+	const search3 = findMultipleDocuments({ text: 'foo', number: 42, boolean: true }, documents);
+	const search4 = findMultipleDocuments({ text: 'foo', number: 42, boolean: true, nothing: null }, documents);
+	const search5 = findMultipleDocuments({ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3] }, documents);
+	const search6 = findMultipleDocuments({ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3], object: { foo: 'bar' } }, documents);
+	const search7 = findMultipleDocuments({ text: /foo/, array: (value: any) => value?.[0] === 1 }, documents);
+	const search8 = findMultipleDocuments({ text: /foo/, object: (value: any) => value?.foo === 'bar' }, documents);
 
 	assertEquals(search1, [0, 1, 2, 3, 4, 5]);
 	assertEquals(search2, [0, 1, 2, 3, 4]);
@@ -59,18 +116,25 @@ Deno.test(`${yellow('[core.ts]')} searchDocuments (Multiple documents)`, () => {
 	assertEquals(search8, [0]);
 });
 
-Deno.test(`${yellow('[core.ts]')} searchDocuments (No criteria)`, () => {
+Deno.test(`${yellow('[core.ts]')} findMultipleDocuments (No criteria)`, () => {
 	const documents: any = [
 		{ text: 'foo' },
 		{ text: 'bar' },
 		{ text: 'baz' },
 	];
-	const search = searchDocuments({}, documents);
-	assertEquals(search, [0, 1, 2]);
 
+	const search1 = findMultipleDocuments({}, documents);
+	const search2 = findMultipleDocuments(undefined, documents);
+	const search3 = findMultipleDocuments({}, []);
+	const search4 = findMultipleDocuments(undefined, []);
+
+	assertEquals(search1, [0, 1, 2]);
+	assertEquals(search2, [0, 1, 2]);
+	assertEquals(search3, []);
+	assertEquals(search4, []);
 });
 
-Deno.test(`${yellow('[core.ts]')} searchDocuments (Search function)`, () => {
+Deno.test(`${yellow('[core.ts]')} findMultipleDocuments (Search function)`, () => {
 	const documents: any = [
 		{ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3], object: { foo: 'bar' } },
 		{ text: 'foo', number: 42, boolean: true, nothing: null, array: [1, 2, 3] },
@@ -80,9 +144,9 @@ Deno.test(`${yellow('[core.ts]')} searchDocuments (Search function)`, () => {
 		{ text: 'foo' },
 	];
 
-	const search1 = searchDocuments(() => true, documents);
-	const search2 = searchDocuments(() => false, documents);
-	const search3 = searchDocuments((value: any) => value?.nothing === null, documents);
+	const search1 = findMultipleDocuments(() => true, documents);
+	const search2 = findMultipleDocuments(() => false, documents);
+	const search3 = findMultipleDocuments((value: any) => value?.nothing === null, documents);
 
 	assertEquals(search1, [0, 1, 2, 3, 4, 5]);
 	assertEquals(search2, []);

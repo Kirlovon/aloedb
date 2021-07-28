@@ -1,8 +1,8 @@
-import { assertEquals, assertThrows } from 'https://deno.land/std/testing/asserts.ts';
-import { dirname, fromFileUrl } from 'https://deno.land/std/path/mod.ts';
-import { copy, ensureDir, emptyDir } from 'https://deno.land/std/fs/mod.ts';
-import { magenta } from 'https://deno.land/std/fmt/colors.ts';
-import { delay } from 'https://deno.land/std/async/mod.ts';
+import { assertEquals, assertThrows } from 'https://deno.land/std@0.102.0/testing/asserts.ts';
+import { dirname, fromFileUrl } from 'https://deno.land/std@0.102.0/path/mod.ts';
+import { copy, ensureDir, emptyDir } from 'https://deno.land/std@0.102.0/fs/mod.ts';
+import { magenta } from 'https://deno.land/std@0.102.0/fmt/colors.ts';
+import { delay } from 'https://deno.land/std@0.102.0/async/mod.ts';
 
 import { Database } from '../lib/database.ts';
 
@@ -203,7 +203,7 @@ Deno.test({
 	async fn() {
 		const db = new Database({ path: TEMP_PATH + '/insertMany_test.json', pretty: false, optimize: false });
 
-		const inserted = await db.insertMany([{ foo: 'bar' }, { bar: 'foo' }, {}, ]);
+		const inserted = await db.insertMany([{ foo: 'bar' }, { bar: 'foo' }, {},]);
 		assertEquals(db.documents, [{ foo: 'bar' }, { bar: 'foo' }]);
 		assertEquals(inserted, [{ foo: 'bar' }, { bar: 'foo' }]);
 
@@ -220,7 +220,7 @@ Deno.test({
 	async fn() {
 		const db = new Database({ path: TEMP_PATH + '/insertMany_empty_test.json', pretty: false, optimize: false });
 
-		const inserted = await db.insertMany([{}, {}, ]);
+		const inserted = await db.insertMany([{}, {},]);
 		assertEquals(db.documents, []);
 		assertEquals(inserted, {});
 
@@ -310,6 +310,99 @@ Deno.test({
 		(found5[0] as any).array.push(999);
 
 		assertEquals(db.documents, initialData);
+	}
+});
+
+Deno.test({
+	name: `${magenta('[database.ts]')} updateOne`,
+	sanitizeResources: false,
+	sanitizeOps: false,
+
+	async fn() {
+		const db = new Database({ path: TEMP_PATH + '/updateOne_test.json', pretty: false, optimize: false });
+
+		const initialData = [
+			{ id: 1, text: 'one', boolean: true, empty: null, array: [1], object: {} },
+			{ id: 2, text: 'two', boolean: true, empty: null, array: [2], object: {} },
+			{ id: 3, text: 'three', boolean: true, empty: null, array: [3], object: {} },
+		];
+
+		await db.insertMany(initialData);
+
+		const updated1 = await db.updateOne({ id: 1 }, { boolean: false });
+		const updated2 = await db.updateOne({ id: 2, object: {}, notDefined: undefined }, { object: { foo: 'bar' }, boolean: false });
+		const updated3 = await db.updateOne({ text: (value) => value === 'three' }, (doc) => {
+			doc.id = 0;
+			doc.text = 'zero';
+			doc.boolean = false;
+			(doc.array as number[])[0] = 0;
+			return doc;
+		});
+		const updated4 = await db.updateOne((value) => value.id === 1, { array: [1, undefined as any], boolean: false });
+		const updated5 = await db.updateOne({ id: 0 }, { object: (value) => value, boolean: false });
+
+		const deleted1 = await db.updateOne({ id: 1 }, () => null);
+		const deleted2 = await db.updateOne({ id: 2 }, () => ({ id: undefined as any }));
+
+		assertEquals(updated1, { id: 1, text: 'one', boolean: false, empty: null, array: [1], object: {} });
+		assertEquals(updated2, { id: 2, text: 'two', boolean: false, empty: null, array: [2], object: { foo: 'bar' } });
+		assertEquals(updated3, { id: 0, text: 'zero', boolean: false, empty: null, array: [0], object: {} });
+		assertEquals(updated4, { id: 1, text: 'one', boolean: false, empty: null, array: [1, null], object: {} });
+		assertEquals(updated5, { id: 0, text: 'zero', boolean: false, empty: null, array: [0], object: { } });
+		assertEquals(deleted1, {});
+		assertEquals(deleted2, {});
+
+		(updated1 as any).id = 999;
+		(updated2 as any).id = 999;
+		(updated3 as any).id = 999;
+		(updated4 as any).array.push(999);
+		(updated5 as any).array.push(999);
+
+		assertEquals(db.documents, [{ id: 0, text: 'zero', boolean: false, empty: null, array: [0], object: {} }]);
+	}
+});
+
+Deno.test({
+	name: `${magenta('[database.ts]')} count`,
+	sanitizeResources: false,
+	sanitizeOps: false,
+
+	async fn() {
+		const db = new Database({ pretty: false, optimize: false });
+
+		const amount1 = await db.count();
+		await db.insertOne({ foo: 'bar' });
+		const amount2 = await db.count({});
+		const amount3 = await db.count({ foo: 'bar' });
+		const amount4 = await db.count({ foo: 'baz' });
+
+		assertEquals(amount1, 0);
+		assertEquals(amount2, 1);
+		assertEquals(amount3, 1);
+		assertEquals(amount4, 0);
+	}
+});
+
+Deno.test({
+	name: `${magenta('[database.ts]')} drop`,
+	sanitizeResources: false,
+	sanitizeOps: false,
+
+	async fn() {
+		const db = new Database({ path: TEMP_PATH + '/drop_test.json', pretty: false, optimize: false });
+
+		await db.insertMany([
+			{ id: 1 },
+			{ id: 2 },
+			{ id: undefined as any },
+			{}
+		]);
+
+		await db.drop();
+		assertEquals(db.documents, []);
+
+		const content = await Deno.readTextFile(TEMP_PATH + '/drop_test.json');
+		assertEquals(content, '[]');
 	}
 });
 

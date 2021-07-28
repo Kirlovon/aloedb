@@ -2,9 +2,21 @@
 
 import { Writer } from './writer.ts';
 import { Reader } from './reader.ts';
-import { searchDocuments, updateDocument, parseDatabaseStorage } from './core.ts';
+import { findOneDocument, findMultipleDocuments, updateDocument, parseDatabaseStorage } from './core.ts';
 import { Document, DatabaseConfig, Query, QueryFunction, Update, UpdateFunction, Acceptable } from './types.ts';
-import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined } from './utils.ts';
+import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined, isNull } from './utils.ts';
+
+// * Version 1.0:
+// Searching for single document
+// TODO: Examples
+// TODO: Finish testing
+// TODO: Refactor internal types
+// TODO: JSON stringify during batching for speedup
+// TODO: Config with skip, limit, sort, immutable
+// TODO: Before Writing & After Reading configuration
+// TODO: Rename optimize to batching, add batching timing configuration
+// TODO: Stringified objects caching (Optional)
+// TODO: Indexing (Optional)
 
 /**
  * # AloeDB 🌿
@@ -115,17 +127,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		const { immutable } = this.config;
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-		// Optimization for empty queries
-		if (!isFunction(query) && (isUndefined(query) || isObjectEmpty(query))) {
-			if (this.documents.length === 0) return null;
-			const document: Schema = this.documents[0];
-			return immutable ? deepClone(document) : document;
-		}
+		const found: number | null = findOneDocument(query as Query, this.documents);
+		if (isNull(found)) return null;
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
-		if (found.length === 0) return null;
-
-		const position: number = found[0];
+		const position: number = found;
 		const document: Schema = this.documents[position];
 
 		return immutable ? deepClone(document) : document;
@@ -145,7 +150,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			return immutable ? deepClone(this.documents) : [...this.documents];
 		}
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments(query as Query, this.documents);
 		if (found.length === 0) return [];
 
 		const documents: Schema[] = [];
@@ -171,10 +176,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
-		if (found.length === 0) return null;
+		const found: number | null = findOneDocument(query as Query, this.documents);
+		if (isNull(found)) return null;
 
-		const position: number = found[0];
+		const position: number = found;
 		const document: Schema = this.documents[position];
 		const updated: Schema | null = updateDocument(document, update as Update) as Schema | null;
 
@@ -203,12 +208,12 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments(query as Query, this.documents);
 		if (found.length === 0) return [];
 
-		let temporary: Schema[] = [...this.documents];
-		let deleted: boolean = false;
+		const temporary: Schema[] = [...this.documents];
 		const updatedDocuments: Schema[] = [];
+		let deleted: boolean = false;
 
 		for (let i = 0; i < found.length; i++) {
 			const position: number = found[i];
@@ -243,10 +248,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
-		if (found.length === 0) return null;
+		const found: number | null = findOneDocument(query as Query, this.documents);
+		if (isNull(found)) return null;
 
-		const position: number = found[0];
+		const position: number = found;
 		const deleted: Schema = this.documents[position];
 
 		this.documents.splice(position, 1);
@@ -265,10 +270,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments(query as Query, this.documents);
 		if (found.length === 0) return [];
 
-		let temporary: Schema[] = [...this.documents];
+		const temporary: Schema[] = [...this.documents];
 		const deleted: Schema[] = [];
 
 		for (let i = 0; i < found.length; i++) {
@@ -296,7 +301,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		// Optimization for empty queries
 		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return this.documents.length;
 
-		const found: number[] = searchDocuments(query as Query, this.documents);
+		const found: number[] = findMultipleDocuments(query as Query, this.documents);
 		return found.length;
 	}
 
@@ -346,7 +351,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 	/**
 	 * Write documents to the database storage file.
-	 * Called automatically after each insert, update or delete operation. _(Only if `autosave` mode enabled)_
+	 * Called automatically after each insert, update or delete operation. _(Only if `autosave` parameter is set to `true`)_
 	 */
 	public async save(): Promise<void> {
 		if (!this.writer) return;

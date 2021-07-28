@@ -1,5 +1,5 @@
-import { assertEquals } from 'https://deno.land/std/testing/asserts.ts';
-import { blue } from 'https://deno.land/std/fmt/colors.ts';
+import { assertEquals } from 'https://deno.land/std@0.102.0/testing/asserts.ts';
+import { blue } from 'https://deno.land/std@0.102.0/fmt/colors.ts';
 
 import {
 	moreThan,

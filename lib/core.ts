@@ -30,12 +30,53 @@ import {
 } from './utils.ts';
 
 /**
- * Find documents positions.
+ * Find one document.
+ * @param query Document selection criteria.
+ * @param documents Array of documents to search.
+ * @returns Found document index.
+ */
+export function findOneDocument(query: Query | QueryFunction | undefined, documents: Document[]): number | null {
+	if (isFunction(query)) {
+		for (let i = 0; i < documents.length; i++) {
+			const document: Document = documents[i];
+			const isMatched: boolean = query(document);
+			if (isMatched) return i;
+		}
+
+		return null;
+	}
+
+	if (isUndefined(query) || isObjectEmpty(query)) {
+		return documents.length > 0 ? 0 : null;
+	}
+
+	for (let i = 0; i < documents.length; i++) {
+		const document: Document = documents[i];
+		let suitable: boolean = true;
+
+		for (const key in query) {
+			const documentValue: DocumentValue = document[key];
+			const queryValue: QueryValue = query[key];
+			const isMatched: boolean = matchValues(queryValue, documentValue);
+			if (isMatched) continue;
+
+			suitable = false;
+			break;
+		}
+
+		if (suitable) return i;
+	}
+
+	return null;
+}
+
+/**
+ * Find multiple documents.
  * @param query Documents selection criteria.
  * @param documents Array of documents to search.
- * @returns Found positions.
+ * @returns Found documents indexes.
  */
-export function searchDocuments(query: Query | QueryFunction | undefined, documents: Document[]): number[] {
+export function findMultipleDocuments(query: Query | QueryFunction | undefined, documents: Document[]): number[] {
 	let found: number[] = [];
 	let firstSearch: boolean = true;
 
@@ -86,7 +127,7 @@ export function searchDocuments(query: Query | QueryFunction | undefined, docume
  * Create new document applying modifications to specified document.
  * @param document Document to update.
  * @param update The modifications to apply.
- * @returns New document with applyed updates or null.
+ * @returns New document with applied updates or null if document should be deleted.
  */
 export function updateDocument(document: Document, update: Update | UpdateFunction): Document | null {
 	let newDocument: Document | null = deepClone(document);

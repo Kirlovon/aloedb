@@ -23,20 +23,20 @@ export interface DatabaseConfig {
 	immutable: boolean;
 
 	/**
-	 * Optimize data writing. If enabled, the data will be written many times faster in case of a large number of operations.
+	 * Optimize writing using batching. If enabled, the data will be written many times faster in case of a large number of operations.
 	 * Disable it if you want the methods to be considered executed only when the data is written to a file. _(Default: true)_
 	 */
-	optimize: boolean;
+	optimize: boolean | number;
 
 	/**
 	 * Runtime documents validation function.
 	 * If the document does not pass the validation, just throw the error.
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
 	 */
-	validator?: Validator;
+	validator?: (document: Readonly<any>) => void;
 }
 
-/** Checking the object for suitability for storage. */
+/** Checking the object for storage suitability. */
 export type Acceptable<T extends Document> = { [K in keyof T]: T[K] & DocumentValue };
 
 /** Any document-like object. */
@@ -68,6 +68,3 @@ export type UpdateFunction<T extends Document = Document> = (document: T) => T |
 
 /** Possible update values. */
 export type UpdateValue<T extends DocumentValue = DocumentValue> = T | ((value: T) => T) | undefined;
-
-/** Schema validation. Throw error, if document unsuitable.  */
-export type Validator = (document: Readonly<Document>) => void;

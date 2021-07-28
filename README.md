@@ -19,14 +19,14 @@
 
 ## 📦 Importing
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts'
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts'
 ```
 
 <br>
 
 ## 📖 Example
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 
 // Structure of stored documents
 interface Film {
@@ -50,7 +50,7 @@ await db.insertOne({
 });
 
 // Search operations
-const found: Film = await db.findOne({ title: 'Drive', film: true });
+const found = await db.findOne({ title: 'Drive', film: true });
 
 // Update operations
 await db.updateOne({ title: 'Drive' }, { year: 2011 });
@@ -68,8 +68,7 @@ To give you an example, here is the speed of a database operations with *1000* d
 
 | Insertion     | Searching     | Updating      | Deleting      |
 | ------------- | ------------- | ------------- | ------------- |
-| 15k _ops/sec_ | 65k _ops/sec_ | 8k _ops/sec_  | 10k _ops/sec_ |
-
+| 15k _ops/sec_ | 80k _ops/sec_ | 8k _ops/sec_  | 12k _ops/sec_ |
 
 <br>
 
@@ -77,7 +76,7 @@ To give you an example, here is the speed of a database operations with *1000* d
 
 ### Initialization
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 
 interface Schema {
 	username: string;
@@ -85,7 +84,7 @@ interface Schema {
 }
 
 const db = new Database<Schema>({
-    path: './data.json',
+	path: './data.json',
 	pretty: true,
 	autoload: true,
 	autosave: true,
@@ -350,7 +349,7 @@ This module contains helper functions that will make it easier to write and read
 
  ```typescript
  // Importing database & helpers
-import { Database, and, includes, length, not, exists } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database, and, includes, length, not, exists } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 
 const db = new Database();
 await db.insertOne({ test: [1, 2, 3] });
@@ -395,9 +394,9 @@ By default, one database instance has only one collection. However, since the da
 Keep in mind that you **cannot specify the same file for multiple instances!**
 
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 
-// Initialize databases instances
+// Initialize database instances
 const users = new Database({ path: './users.json' });
 const posts = new Database({ path: './posts.json' });
 const comments = new Database({ path: './comments.json' });
@@ -418,7 +417,7 @@ You cannot always be sure about the data that comes to your server. TypeScript h
 Luckily, you can use a library such as [SuperStruct](https://github.com/ianstormtaylor/superstruct), which allows you to check your documents structure:
 
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 import { assert, object, string, Infer } from 'https://cdn.skypack.dev/superstruct?dts';
 
 // Specify structure
@@ -454,7 +453,7 @@ Most of the time this is not necessary, as the built-in methods are sufficient, 
 Keep in mind that after your changes, **you should always call the `await db.save()` method!**
 
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 
 // Initialize
 const db = new Database('./data.json');
@@ -472,7 +471,7 @@ try {
 Also, if you set the parameter **immutable** to `false` when initializing the database, you will get back references to in-memory documents instead of their copies. This means that you cannot change the returned documents without calling the `await db.save()` method.
 
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb/mod.ts';
+import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 
 // Initialization with immutability disabled
 const db = new Database({ path: './data.json', immutable: false });
@@ -499,7 +498,7 @@ Surprisingly, this library was ported to other programming languages without my 
 
 🟠 **[AlroeDB](https://github.com/wkirk01/AlroeDB)** - database for Rust, also made by [wkirk01](https://github.com/wkirk01)!
 
-🟢 **[AloeDB-Node](https://github.com/ElectroGamez/AloeDB-Node)** - port to the Node.js, made by [ElectroGamez](https://github.com/ElectroGamez)! _(With awesome Active Records example)_
+🟢 **[AloeDB-Node](https://github.com/wouterdebruijn/AloeDB-Node)** - port to the Node.js, made by [Wouter de Bruijn](https://github.com/wouterdebruijn)! _(With awesome Active Records example)_
 
 <br>
 

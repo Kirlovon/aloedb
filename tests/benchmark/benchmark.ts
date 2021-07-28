@@ -1,30 +1,33 @@
 import { Database } from '../../mod.ts';
-import { RunBenchmark } from './utils.ts';
+import { RunBenchmark, randomID } from './utils.ts';
 
-// Path to the temp file
 const TEMP_FILE: string = './temp_benchmark_db.json';
+const ITERATIONS = 1000;
+
+const IDS: string[] = [];
+for (let i = 0; i < ITERATIONS; i++) IDS.push(randomID());
 
 // Initialization
-const db = new Database({ path: TEMP_FILE, autosave: true, immutable: true, pretty: false, optimize: true  });
+const db = new Database({ path: TEMP_FILE, autosave: true, immutable: true, pretty: false, optimize: true });
 
 // Running insertion operations
-await RunBenchmark('Insertion', 1000, async (iteration) => {
-	await db.insertOne({ foo: 'bar' + iteration });
+await RunBenchmark('Insertion', ITERATIONS, async (iteration) => {
+	await db.insertOne({ foo: IDS[iteration] });
 });
 
 // Running searching operations
-await RunBenchmark('Searching', 1000, async (iteration) => {
-	await db.findOne({ foo: 'bar' + iteration });
+await RunBenchmark('Searching', ITERATIONS, async (iteration) => {
+	await db.findOne({ foo: IDS[iteration] });
 });
 
 // Running updating operations
-await RunBenchmark('Updating', 1000, async (iteration) => {
-	await db.updateOne({ foo: 'bar' + iteration }, { foo: 'bar' + iteration });
+await RunBenchmark('Updating', ITERATIONS, async (iteration) => {
+	await db.updateOne({ foo: IDS[iteration] }, { foo: IDS[iteration] });
 });
 
 // Running deleting operations
-await RunBenchmark('Deleting', 1000, async (iteration) => {
-	await db.deleteMany({ foo: 'bar' + iteration });
+await RunBenchmark('Deleting', ITERATIONS, async (iteration) => {
+	await db.deleteOne({ foo: IDS[iteration] });
 });
 
 // Remove temp file

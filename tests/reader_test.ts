@@ -1,7 +1,7 @@
-import { assertEquals, assertThrows, assertThrowsAsync } from 'https://deno.land/std/testing/asserts.ts';
-import { copy, ensureDir, emptyDir, exists, existsSync } from 'https://deno.land/std/fs/mod.ts';
-import { dirname, fromFileUrl } from 'https://deno.land/std/path/mod.ts';
-import { cyan } from 'https://deno.land/std/fmt/colors.ts';
+import { assertEquals, assertThrows, assertThrowsAsync } from 'https://deno.land/std@0.102.0/testing/asserts.ts';
+import { copy, ensureDir, emptyDir, exists, existsSync } from 'https://deno.land/std@0.102.0/fs/mod.ts';
+import { dirname, fromFileUrl } from 'https://deno.land/std@0.102.0/path/mod.ts';
+import { cyan } from 'https://deno.land/std@0.102.0/fmt/colors.ts';
 
 import { Reader } from '../lib/reader.ts';
 
