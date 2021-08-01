@@ -1,5 +1,5 @@
 import { Database } from '../../mod.ts';
-import { RunBenchmark, randomID } from './utils.ts';
+import { RunBenchmark, randomID, delay } from './utils.ts';
 
 const TEMP_FILE: string = './temp_benchmark_db.json';
 const ITERATIONS = 1000;
@@ -15,19 +15,25 @@ await RunBenchmark('Insertion', ITERATIONS, async (iteration) => {
 	await db.insertOne({ foo: IDS[iteration], i: iteration });
 });
 
+await delay(500);
+
 // Running searching operations
 await RunBenchmark('Searching', ITERATIONS, async (iteration) => {
 	await db.findOne({ foo: IDS[iteration] });
 });
 
+await delay(500);
+
 // Running updating operations
 await RunBenchmark('Updating', ITERATIONS, async (iteration) => {
-	await db.updateOne({ foo: IDS[iteration] }, { foo: IDS[iteration] });
+	await db.updateMany({ foo: IDS[iteration] }, { foo: IDS[iteration] });
 });
+
+await delay(500);
 
 // Running deleting operations
 await RunBenchmark('Deleting', ITERATIONS, async (iteration) => {
-	await db.deleteOne({ foo: IDS[iteration] });
+	await db.deleteMany({ foo: IDS[iteration] });
 });
 
 // Remove temp file

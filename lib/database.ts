@@ -12,7 +12,6 @@ import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunctio
 // * Rename optimize to batching
 // * JSON stringify during batching for speedup
 
-// TODO: Indexing
 // TODO: Before Writing & After Reading configuration
 // TODO: Config with skip, limit, sort, immutable
 // TODO: Make documents storage read only

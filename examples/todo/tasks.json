@@ -1,0 +1,22 @@
+[
+	{
+		"id": "1eT30aviFuV3hIWgoekZW",
+		"text": "Eat pizza 🍕",
+		"done": false
+	},
+	{
+		"id": "WeJ69TBQLnblJLqT1kItc",
+		"text": "Make coffie ☕",
+		"done": false
+	},
+	{
+		"id": "_g_BBDNr3kmA7ucFBXDZx",
+		"text": "Feed a cat 🐈",
+		"done": false
+	},
+	{
+		"id": "0iCzpv60u5BO8W0_jAi9A",
+		"text": "Take a rest 🛌",
+		"done": true
+	}
+]

@@ -41,4 +41,12 @@ export function randomID(length: number = 32): string {
 	}
 
 	return result;
-};
+}
+
+/**
+ * Delay function
+ * @param ms Delay time
+ */
+export function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}

@@ -68,7 +68,7 @@ To give you an example, here is the speed of a database operations with *1000* d
 
 | Insertion     | Searching     | Updating      | Deleting      |
 | ------------- | ------------- | ------------- | ------------- |
-| 15k _ops/sec_ | 80k _ops/sec_ | 8k _ops/sec_  | 12k _ops/sec_ |
+| 15k _ops/sec_ | 65k _ops/sec_ | 8k _ops/sec_  | 10k _ops/sec_ |
 
 <br>
 
