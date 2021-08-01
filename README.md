@@ -58,6 +58,8 @@ await db.updateOne({ title: 'Drive' }, { year: 2011 });
 // Delete operations
 await db.deleteOne({ title: 'Drive' });
 ```
+_P.S. You can find more examples [here](https://github.com/Kirlovon/AloeDB/examples)!_
+
 
 <br>
 
