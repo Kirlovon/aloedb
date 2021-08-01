@@ -6,7 +6,7 @@ Examples of using [AloeDB](https://github.com/Kirlovon/AloeDB) in small projects
 
 ### Examples:
 
-* [ToDo List](https://github.com/Kirlovon/AloeDB/examples/todo) - to do list made with AloeDB, Oak, NanoID & Superstruct.
+* [ToDo List](https://github.com/Kirlovon/AloeDB/tree/master/examples/todo) - to do list made with AloeDB, Oak, NanoID & Superstruct.
 
 <br>
 
