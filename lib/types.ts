@@ -4,6 +4,7 @@
  * Database initialization config
  */
 export interface DatabaseConfig {
+
 	/** Path to the database file. If undefined, data will be stored only in-memory. _(Default: undefined)_ */
 	path?: string;
 
@@ -34,6 +35,7 @@ export interface DatabaseConfig {
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
 	 */
 	validator?: (document: any) => void;
+
 }
 
 /** Checking the object for storage suitability. */

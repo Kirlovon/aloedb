@@ -6,17 +6,10 @@ import { findOneDocument, findMultipleDocuments, updateDocument, parseDatabaseSt
 import { Document, DatabaseConfig, Query, QueryFunction, Update, UpdateFunction, Acceptable } from './types.ts';
 import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined, isNull } from './utils.ts';
 
-// * Version 1.0:
-// * Searching for single document
-// * Refactor internal types
-// * Rename optimize to batching
-// * JSON stringify during batching for speedup
-
 // TODO: Before Writing & After Reading configuration
 // TODO: Config with skip, limit, sort, immutable
-// TODO: Make documents storage read only
+// TODO: Make documents storage read only (Optional)
 // TODO: Finish testing
-// TODO: Examples
 
 /**
  * # AloeDB 🌿
@@ -64,7 +57,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		// Writer initialization
 		if (this.config.path) {
-			this.writer = new Writer(this.config.path);
+			this.writer = new Writer(this.config.path );
 			if (this.config.autoload) this.loadSync();
 		}
 	}
