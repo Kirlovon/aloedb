@@ -256,6 +256,26 @@ await db.findOne({ foo: 'bar' });
 ```
 Returns a document that matches the search query. Returns `null` if nothing found.
 
+### FindOne with RegExp
+```typescript
+await db.insertOne({ text: 'sOmE TeXt'});
+
+// Using regular expressions
+await db.findOne({
+	text: new RegExp('some text', 'i')
+});
+```
+It wouldn't find "some text" because it's case sensitive by default search.
+To search case insensetively, use below as well:
+```typescript
+// Using search function
+await db.findOne({
+	text: (value: any) => value.toLowerCase() === 'some text'
+});
+```
+
+For fuzzy search, please, refer to [FuseJS](https://fusejs.io/)
+
 <br>
 
 ### FindMany
@@ -263,6 +283,18 @@ Returns a document that matches the search query. Returns `null` if nothing foun
 await db.findMany({ foo: 'bar' });
 ```
 Returns an array of documents matching the search query.
+
+### FindMany with RegExp
+```typescript
+await db.insertOne({ title: 'How To Use Linux?' });
+await db.insertOne({ title: 'Most popular linux distributions' });
+
+const result = await db.findMany({
+	title: new RegExp('linux', 'i')
+});
+
+console.log(result); // [ { title: "How To Use Linux?" }, { title: "Most popular linux distributions" } ]
+```
 
 <br>
 
