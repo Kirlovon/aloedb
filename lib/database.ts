@@ -2,13 +2,41 @@
 
 import { Writer } from './writer.ts';
 import { Reader } from './reader.ts';
-import { findOneDocument, findMultipleDocuments, updateDocument, parseDatabaseStorage } from './core.ts';
-import { Document, DatabaseConfig, Query, QueryFunction, Update, UpdateFunction, Acceptable } from './types.ts';
-import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunction, isObject, isString, isUndefined, isNull } from './utils.ts';
+import { Cursor } from './cursor.ts';
 
-// TODO: Before Writing & After Reading configuration
-// TODO: Config with skip, limit, sort, immutable
-// TODO: Make documents storage read only (Optional)
+import {
+	findOneDocument,
+	findMultipleDocuments,
+	updateDocument,
+	parseDatabaseStorage
+} from './core.ts';
+
+import {
+	Document,
+	DatabaseConfig,
+	Query,
+	QueryFunction,
+	Update,
+	UpdateFunction,
+	Acceptable,
+	Options
+} from './types.ts';
+
+import {
+	deepClone,
+	cleanArray,
+	isObjectEmpty,
+	isString,
+	isBoolean,
+	isNull,
+	isArray,
+	isObject,
+	isFunction,
+	isUndefined
+} from './utils.ts';
+
+// TODO: Add new cursor methods: filter, map, forEach, reverse
+// TODO: Remove prepareObject and allow dates and other types via parser (Optional)
 // TODO: Finish testing
 
 /**
@@ -18,6 +46,7 @@ import { cleanArray, deepClone, isObjectEmpty, prepareObject, isArray, isFunctio
  * [Deno](https://deno.land/x/aloedb) | [Github](https://github.com/Kirlovon/AloeDB)
  */
 export class Database<Schema extends Acceptable<Schema> = Document> {
+
 	/**
 	 * In-Memory documents storage.
 	 *
@@ -37,6 +66,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		autosave: true,
 		batching: true,
 		immutable: true,
+		parser: undefined,
 		validator: undefined
 	};
 
@@ -57,21 +87,36 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		// Writer initialization
 		if (this.config.path) {
-			this.writer = new Writer(this.config.path );
+			this.writer = new Writer(this.config.path, this.config.pretty);
 			if (this.config.autoload) this.loadSync();
 		}
 	}
 
 	/**
+	 * Select documents by search query.
+	 * @param query Documents selection criteria.
+	 * @param options Additional configurations.
+	 * @returns Cursor instance.
+	 */
+	public select(query?: Query<Schema> | QueryFunction<Schema>, options?: Options) {
+		return new Cursor<Schema>(this, query, options);
+	}
+
+	/**
 	 * Insert a document.
 	 * @param document Document to insert.
+	 * @param options Additional configurations.
 	 * @returns Inserted document.
 	 */
-	public async insertOne(document: Schema): Promise<Schema> {
-		const { immutable, validator, autosave } = this.config;
+	public async insertOne(document: Schema, options?: Options): Promise<Schema> {
 		if (!isObject(document)) throw new TypeError('Document must be an object');
 
-		prepareObject(document);
+		let { immutable, validator, autosave } = this.config;
+		if (options) {
+			if (isBoolean(options.autosave)) autosave = options.autosave;
+			if (isBoolean(options.immutable)) immutable = options.immutable;
+		}
+
 		if (validator) validator(document);
 		if (isObjectEmpty(document)) return {} as Schema;
 
@@ -85,11 +130,17 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
 	 * Inserts multiple documents.
 	 * @param documents Array of documents to insert.
+	 * @param options Additional configurations.
 	 * @returns Array of inserted documents.
 	 */
-	public async insertMany(documents: Schema[]): Promise<Schema[]> {
-		const { immutable, validator, autosave } = this.config;
+	public async insertMany(documents: Schema[], options?: Options): Promise<Schema[]> {
 		if (!isArray(documents)) throw new TypeError('Input must be an array');
+
+		let { immutable, validator, autosave } = { ...this.config };
+		if (options) {
+			if (isBoolean(options.autosave)) autosave = options.autosave;
+			if (isBoolean(options.immutable)) immutable = options.immutable;
+		}
 
 		const inserted: Schema[] = [];
 
@@ -97,7 +148,6 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			const document: Schema = documents[i];
 			if (!isObject(document)) throw new TypeError('Documents must be an objects');
 
-			prepareObject(document);
 			if (validator) validator(document);
 			if (isObjectEmpty(document)) continue;
 
@@ -114,29 +164,33 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
 	 * Find document by search query.
 	 * @param query Document selection criteria.
+	 * @param options Additional configurations.
 	 * @returns Found document.
 	 */
-	public async findOne(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema | null> {
-		const { immutable } = this.config;
+	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'autosave'>): Promise<Schema | null> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+
+		let { immutable } = this.config;
+		if (options && isBoolean(options.immutable)) immutable = options.immutable;
 
 		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
 
-		const position: number = found;
-		const document: Schema = this.documents[position];
-
+		const document: Schema = this.documents[found];
 		return immutable ? deepClone(document) : document;
 	}
 
 	/**
 	 * Find multiple documents by search query.
 	 * @param query Documents selection criteria.
+	 * @param options Additional configurations.
 	 * @returns Found documents.
 	 */
-	public async findMany(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema[]> {
-		const { immutable } = this.config;
+	public async findMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'autosave'>): Promise<Schema[]> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+
+		let { immutable } = this.config;
+		if (options && isBoolean(options.immutable)) immutable = options.immutable;
 
 		// Optimization for empty queries
 		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) {
@@ -147,7 +201,6 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (found.length === 0) return [];
 
 		const documents: Schema[] = [];
-
 		for (let i = 0; i < found.length; i++) {
 			const position: number = found[i];
 			const document: Schema = this.documents[position];
@@ -161,13 +214,18 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * Modifies an existing document that match search query.
 	 * @param query Document selection criteria.
 	 * @param update The modifications to apply.
+	 * @param options Additional configurations.
 	 * @returns Found document with applied modifications.
 	 */
-	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>): Promise<Schema | null> {
-		const { validator, autosave, immutable } = this.config;
-
+	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Options): Promise<Schema | null> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
+
+		let { validator, autosave, immutable } = this.config;
+		if (options) {
+			if (isBoolean(options.autosave)) autosave = options.autosave;
+			if (isBoolean(options.immutable)) immutable = options.immutable;
+		}
 
 		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
@@ -180,6 +238,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		if (isObjectEmpty(updated)) {
 			this.documents.splice(position, 1);
+			if (autosave) await this.save();
 			return {} as Schema;
 		}
 
@@ -193,13 +252,18 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * Modifies all documents that match search query.
 	 * @param query Documents selection criteria.
 	 * @param update The modifications to apply.
+	 * @param options Additional configurations.
 	 * @returns Found documents with applied modifications.
 	 */
-	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>): Promise<Schema[]> {
-		const { validator, autosave, immutable } = this.config;
-
+	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Options): Promise<Schema[]> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
+
+		let { validator, autosave, immutable } = this.config;
+		if (options) {
+			if (isBoolean(options.autosave)) autosave = options.autosave;
+			if (isBoolean(options.immutable)) immutable = options.immutable;
+		}
 
 		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
@@ -216,8 +280,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			if (validator) validator(updated);
 
 			if (isObjectEmpty(updated)) {
-				deleted = true;
 				delete temporary[position];
+				deleted = true;
 				continue;
 			}
 
@@ -225,7 +289,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			updatedDocuments.push(updated);
 		}
 
-		this.documents = deleted ? cleanArray(temporary) : temporary;
+		this.documents = temporary;
+		if (deleted) this.documents = cleanArray(this.documents);
 		if (autosave) await this.save();
 
 		return immutable ? deepClone(updatedDocuments) : updatedDocuments;
@@ -234,12 +299,14 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
 	 * Deletes first found document that matches the search query.
 	 * @param query Document selection criteria.
+	 * @param options Additional configurations.
 	 * @returns Deleted document.
 	 */
-	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema | null> {
-		const { autosave } = this.config;
-
+	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'immutable'>): Promise<Schema | null> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+
+		let { autosave } = this.config;
+		if (options && isBoolean(options.autosave)) autosave = options.autosave;
 
 		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
@@ -256,12 +323,14 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
 	 * Deletes all documents that matches the search query.
 	 * @param query Document selection criteria.
+	 * @param options Additional configurations.
 	 * @returns Array of deleted documents.
 	 */
-	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>): Promise<Schema[]> {
-		const { autosave } = this.config;
-
+	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'immutable'>): Promise<Schema[]> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+
+		let { autosave } = this.config;
+		if (options && isBoolean(options.autosave)) autosave = options.autosave;
 
 		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
@@ -350,9 +419,9 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!this.writer) return;
 
 		if (this.config.batching) {
-			this.writer.batchWrite(this.documents, this.config.pretty); // Should be without await
+			this.writer.write(this.documents); // Should be without await
 		} else {
-			await this.writer.write(this.documents, this.config.pretty);
+			await this.writer.write(this.documents);
 		}
 	}
 }

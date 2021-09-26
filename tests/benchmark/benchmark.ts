@@ -8,36 +8,38 @@ const IDS: string[] = [];
 for (let i = 0; i < ITERATIONS; i++) IDS.push(randomID());
 
 // Initialization
-const db = new Database({ path: TEMP_FILE, autosave: true, immutable: true, pretty: true, batching: true });
+const db = new Database({ path: TEMP_FILE, autosave: true, immutable: false, pretty: true, batching: true });
+
+await delay(100);
 
 // Running insertion operations
 await RunBenchmark('Insertion', ITERATIONS, async (iteration) => {
 	await db.insertOne({ foo: IDS[iteration], i: iteration });
 });
 
-await delay(500);
+await delay(100);
 
 // Running searching operations
 await RunBenchmark('Searching', ITERATIONS, async (iteration) => {
 	await db.findOne({ foo: IDS[iteration] });
 });
 
-await delay(500);
+await delay(100);
 
 // Running updating operations
 await RunBenchmark('Updating', ITERATIONS, async (iteration) => {
 	await db.updateMany({ foo: IDS[iteration] }, { foo: IDS[iteration] });
 });
 
-await delay(500);
+await delay(100);
 
 // Running deleting operations
 await RunBenchmark('Deleting', ITERATIONS, async (iteration) => {
 	await db.deleteMany({ foo: IDS[iteration] });
 });
 
+await delay(100);
+
 // Remove temp file
-setTimeout(() => {
-	Deno.removeSync(TEMP_FILE);
-}, 1000);
+Deno.removeSync(TEMP_FILE);
 

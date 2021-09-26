@@ -12,6 +12,7 @@ import {
 	deepCompare,
 	prepareArray,
 	prepareObject,
+	sortDocuments,
 	isPrimitive,
 	isString,
 	isNumber,
@@ -56,6 +57,7 @@ Deno.test(`${green('[utils.ts]')} getPathFilename`, () => {
 	assertEquals(getPathFilename('/foo/bar.json'), 'bar.json');
 	assertEquals(getPathFilename('//foo//bar.json'), 'bar.json');
 	assertEquals(getPathFilename('\\foo\\bar.json'), 'bar.json');
+	assertEquals(getPathFilename(''), '');
 });
 
 Deno.test(`${green('[utils.ts]')} getPathDirname`, () => {
@@ -200,6 +202,57 @@ Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
 		g: [1, 2, null, null],
 	});
 });
+
+Deno.test(`${green('[utils.ts]')} sortDocuments`, () => {
+	const testArray: any[] = [
+		{ foo: 'hello', bar: 'a' },
+		{ foo: 2, bar: 'e' },
+		{ foo: 6, bar: 'f' },
+		{ foo: 0, bar: 'a' },
+		{ foo: 2, bar: 'e', optional: null },
+		{ foo: 3, bar: 'c' },
+		{ foo: 1, bar: 'a' },
+		{ foo: 4, bar: 'g' },
+		{ foo: 2, bar: 'b' },
+		{ foo: 4, bar: 'd' },
+		{ foo: 2, bar: 'e', optional: 1 },
+	]
+
+	sortDocuments(testArray, { bar: 'asc', foo: 'desc', optional: 'asc', other: 'asc' });
+
+	assertEquals(testArray, [
+		{ foo: 'hello', bar: 'a' },
+		{ foo: 1, bar: 'a' },
+		{ foo: 0, bar: 'a' },
+		{ foo: 2, bar: 'b' },
+		{ foo: 3, bar: 'c' },
+		{ foo: 4, bar: 'd' },
+		{ foo: 2, bar: 'e' },
+		{ foo: 2, bar: 'e', optional: null },
+		{ foo: 2, bar: 'e', optional: 1 },
+		{ foo: 6, bar: 'f' },
+		{ foo: 4, bar: 'g' },
+	]);
+});
+
+Deno.test(`${green('[utils.ts]')} sortDocuments (No Documents)`, () => {
+	const result = sortDocuments([], { bar: 'asc', foo: 'desc', optional: 'asc', other: 'asc' });
+	assertEquals(result, []);
+});
+
+Deno.test(`${green('[utils.ts]')} sortDocuments (No Query)`, () => {
+	const testArray: any[] = [
+		{ foo: 'hello', bar: 'a' },
+		{ foo: 2, bar: 'e' },
+	];
+
+	const result = sortDocuments(testArray, {});
+	assertEquals(result, [
+		{ foo: 'hello', bar: 'a' },
+		{ foo: 2, bar: 'e' },
+	]);
+});
+
 
 Deno.test(`${green('[utils.ts]')} isPrimitive`, () => {
 	assertEquals(isPrimitive('foo'), true);

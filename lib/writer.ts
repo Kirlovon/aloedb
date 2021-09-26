@@ -17,33 +17,44 @@ export class Writer {
 	/** Path to the database file. */
 	private readonly path: string;
 
-	/** Temporary file extension. */
-	private readonly extension: string = '.temp';
+	/** Write data in easy-to-read format. */
+	private readonly pretty: boolean;
 
 	/**
-	 * Storage initialization.
+	 * Writer initialization.
 	 * @param path Path to the database file.
+	 * @param pretty Write data in easy-to-read format.
 	 */
-	constructor(path: string) {
+	constructor(path: string, pretty: boolean) {
 		this.path = path;
+		this.pretty = pretty;
 	}
 
 	/**
-	 * Batch data writing.
-	 * Do not call this method with `await`, otherwise the result of this method will be identical to the `write()` method.
+	 * Safe & fast data writing.
+	 * If you call this method with `await`, the data will be writen without batching.
 	 *
 	 * @param documents Array with documents to write.
-	 * @param pretty Write data in easy-to-read format.
 	 */
-	public async batchWrite(documents: Document[], pretty: boolean): Promise<void> {
+	public async write(documents: Document[]): Promise<void> {
 		if (this.locked) {
 			this.next = documents;
 			return;
 		}
 
+		this.locked = true;
+
 		try {
-			this.locked = true;
-			await this.write(documents, pretty);
+
+			const temp: string = this.path + '.temp';
+			const serialized: string = this.pretty
+				? JSON.stringify(documents, null, '\t')
+				: JSON.stringify(documents);
+
+			// Atomic write
+			await Deno.writeTextFile(temp, serialized);
+			await Deno.rename(temp, this.path);
+
 		} finally {
 			this.locked = false;
 		}
@@ -51,20 +62,7 @@ export class Writer {
 		if (this.next) {
 			const nextCopy = this.next;
 			this.next = null;
-			this.batchWrite(nextCopy, pretty);
+			await this.write(nextCopy);
 		}
-	}
-
-	/**
-	  * Write data to the database file.
-	  * @param documents Array with documents to write.
-	  * @param pretty Write data in easy-to-read format.
-	  */
-	public async write(documents: Document[], pretty: boolean): Promise<void> {
-		const temp: string = this.path + this.extension;
-		const encoded: string = pretty ? JSON.stringify(documents, null, '\t') : JSON.stringify(documents);
-
-		await Deno.writeTextFile(temp, encoded);
-		await Deno.rename(temp, this.path);
 	}
 }

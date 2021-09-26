@@ -50,7 +50,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	fn() {
-		assertThrows(() => Reader.readSync(TEMP_PATH)); // Its directory, not a file
+		assertThrows(() => Reader.readSync(TEMP_PATH), Deno.errors.PermissionDenied); // Its directory, not a file
 	}
 });
 
@@ -90,7 +90,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		await assertThrowsAsync(async () => await Reader.read(TEMP_PATH)); // Its directory, not a file
+		await assertThrowsAsync(async () => await Reader.read(TEMP_PATH), Deno.errors.PermissionDenied); // Its directory, not a file
 	}
 });
 

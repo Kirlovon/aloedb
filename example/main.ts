@@ -1,10 +1,10 @@
 import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
 import { Application, Router, send } from 'https://deno.land/x/oak@v8.0.0/mod.ts';
 import { nanoid } from 'https://deno.land/x/nanoid@v3.0.0/mod.ts';
-import { assert, object, string, boolean, Infer } from 'https://cdn.skypack.dev/superstruct?dts';
+import { assert, object, string, boolean, Infer } from 'https://cdn.skypack.dev/superstruct@0.15.2?dts';
 import { dirname, fromFileUrl } from 'https://deno.land/std@0.103.0/path/mod.ts';
 
-// Get parent directory of main.ts
+// Get directory of main.ts
 const DIRNAME = dirname(fromFileUrl(import.meta.url));
 
 // Specify Superstruct structure
@@ -15,7 +15,7 @@ const TaskStructure = object({
 });
 
 // Create validation function
-const TaskValidator = (document: any) => assert(document, TaskStructure);
+const TaskValidator = (document: unknown) => assert(document, TaskStructure);
 
 // Convert structure to TypeScript type
 type Task = Infer<typeof TaskStructure>;
@@ -63,7 +63,7 @@ router.put('/tasks/:id', async (context) => {
 
 	await db.updateOne(
 		{ id: context.params.id },
-		{ done: (value) => !value }
+		{ done: (value: boolean) => !value }
 	);
 
 	const tasks = await db.findMany();

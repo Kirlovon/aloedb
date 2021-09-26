@@ -58,7 +58,7 @@ await db.updateOne({ title: 'Drive' }, { year: 2011 });
 // Delete operations
 await db.deleteOne({ title: 'Drive' });
 ```
-_P.S. You can find more examples [here](https://github.com/Kirlovon/AloeDB/tree/master/examples)!_
+_P.S. You can find a complete example [here](https://github.com/Kirlovon/AloeDB/tree/master/example)!_
 
 
 <br>
@@ -68,9 +68,9 @@ This database is not aimed at a heavily loaded backend, but its speed should be 
 
 To give you an example, here is the speed of a database operations with *1000* documents:
 
-| Insertion     | Searching     | Updating      | Deleting      |
-| ------------- | ------------- | ------------- | ------------- |
-| 15k _ops/sec_ | 65k _ops/sec_ | 8k _ops/sec_  | 10k _ops/sec_ |
+| Insertion      | Searching     | Updating      | Deleting      |
+| -------------  | ------------- | ------------- | ------------- |
+| 300k _ops/sec_ | 80k _ops/sec_ | 40k _ops/sec_ | 45k _ops/sec_ |
 
 <br>
 
@@ -142,7 +142,7 @@ await db.insertOne({ username: 'greg' }); // Error: Property 'password' is missi
 ### Inserting
 AloeDB is a document-oriented database, so you storing objects in it. The supported types are **Strings**, **Numbers**, **Booleans**, **Nulls**, **Arrays** & **Objects**.
 
-Keep in mind that data types such as **Date**, **Map**, **Set** and other complex types are not supported, and all fields with them will be deleted. Also, any blank documents will not be inserted.
+Keep in mind that data types such as **Date**, **Map**, **Set** and other complex types are **not supported**, and all fields with them will be deleted. Also, any blank documents will not be inserted.
 
 ```typescript
 const inserted = await db.insertOne({ text: 'Hey hey, im inserted!' });
@@ -420,7 +420,7 @@ Luckily, you can use a library such as [SuperStruct](https://github.com/ianstorm
 
 ```typescript
 import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
-import { assert, object, string, Infer } from 'https://cdn.skypack.dev/superstruct?dts';
+import { assert, object, string, Infer } from 'https://cdn.skypack.dev/superstruct@0.15.2?dts';
 
 // Specify structure
 const User = object({

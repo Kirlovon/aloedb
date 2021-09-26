@@ -7,8 +7,7 @@ import {
 	QueryValue,
 	QueryFunction,
 	Update,
-	UpdateValue,
-	UpdateFunction,
+	UpdateFunction
 } from './types.ts';
 
 import {
@@ -23,8 +22,7 @@ import {
 	isRegExp,
 	isString,
 	isUndefined,
-	numbersList,
-	prepareObject,
+	numbersList
 } from './utils.ts';
 
 /**
@@ -140,12 +138,11 @@ export function updateDocument<T extends Document>(document: T, update: Update<T
 			const value = update[key];
 
 			newDocument[key] = isFunction(value)
-				? value(newDocument[key])
+				? value(newDocument[key], key, newDocument)
 				: value as T[Extract<keyof T, string>];
 		}
 	}
 
-	prepareObject(newDocument);
 	return deepClone(newDocument);
 }
 
@@ -194,7 +191,6 @@ export function parseDatabaseStorage(content: string): Document[] {
 	for (let i = 0; i < documents.length; i++) {
 		const document = documents[i];
 		if (!isObject(document)) throw new TypeError('Database storage should contain only objects');
-		prepareObject(document);
 		if (isObjectEmpty(document)) delete documents[i];
 	}
 

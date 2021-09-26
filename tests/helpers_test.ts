@@ -90,6 +90,9 @@ Deno.test(`${blue('[helpers.ts]')} type`, () => {
 	const searchNull = type('null');
 	assertEquals(searchNull(null), true);
 	assertEquals(searchNull({}), false);
+
+	const searchOther = type('hahah' as 'null');
+	assertEquals(searchOther('test'), false);
 });
 
 Deno.test(`${blue('[helpers.ts]')} includes`, () => {

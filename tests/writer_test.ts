@@ -20,9 +20,9 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const writer = new Writer(TEMP_PATH + '/test_storage_1.json');
+		const writer = new Writer(TEMP_PATH + '/test_storage_1.json', false);
 
-		await writer.write([{ foo: 'bar' }], false);
+		await writer.write([{ foo: 'bar' }]);
 
 		const content = await Deno.readTextFile(TEMP_PATH + '/test_storage_1.json');
 		assertEquals(content, '[{"foo":"bar"}]');
@@ -35,10 +35,10 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const writer = new Writer(TEMP_PATH + '/test_storage_2.json');
+		const writer = new Writer(TEMP_PATH + '/test_storage_2.json', false);
 
-		writer.batchWrite([{ foo: 'old' }], false);
-		writer.batchWrite([{ foo: 'new' }], false);
+		writer.write([{ foo: 'old' }]);
+		writer.write([{ foo: 'new' }]);
 
 		await delay(100);
 

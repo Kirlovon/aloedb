@@ -1,6 +1,6 @@
 // Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
 
-import { DocumentPrimitive } from './types.ts';
+import { Document, DocumentPrimitive, SortQuery } from './types.ts';
 
 /** Any object without specified structure. */
 interface PlainObject {
@@ -22,7 +22,7 @@ export function cleanArray<T extends unknown[]>(target: T): T {
  * @returns Generated array.
  */
 export function numbersList(number: number): number[] {
-	const array: number[] = [];
+	const array = [];
 	for (let i = 0; i <= number; i++) array.push(i);
 	return array;
 }
@@ -43,7 +43,7 @@ export function isObjectEmpty(target: PlainObject): boolean {
  * @returns Number of keys.
  */
 export function getObjectLength(target: PlainObject): number {
-	let length: number = 0;
+	let length = 0;
 	for (let key in target) length++;
 	return length;
 }
@@ -54,8 +54,8 @@ export function getObjectLength(target: PlainObject): number {
  * @returns Filename from the path.
  */
 export function getPathFilename(path: string): string {
-	const parsed: string[] = path.split(/[\\\/]/);
-	const filename: string | undefined = parsed.pop();
+	const parsed = path.split(/[\\\/]/);
+	const filename = parsed.pop();
 
 	return filename ? filename : '';
 }
@@ -66,13 +66,12 @@ export function getPathFilename(path: string): string {
  * @returns Dirname from the path.
  */
 export function getPathDirname(path: string): string {
-	let parsed: string[] = path.split(/[\\\/]/);
+	let parsed = path.split(/[\\\/]/);
 	parsed = parsed.map(value => value.trim());
 	parsed = parsed.filter(value => value !== '');
 	parsed.pop();
 
-	const dirname: string = parsed.join('/');
-	return dirname;
+	return parsed.join('/');
 }
 
 /**
@@ -81,7 +80,7 @@ export function getPathDirname(path: string): string {
  * @return Clone of the target.
  */
 export function deepClone<T>(target: T): T {
-	if (isNull(target)) return target;
+	if (isPrimitive(target)) return target;
 
 	if (isArray(target)) {
 		const clone: any = [];
@@ -131,8 +130,24 @@ export function deepCompare(targetA: unknown, targetB: unknown): boolean {
 	return targetA === targetB;
 }
 
+export function cleanUndefinedValues<T>(target: T): T {
+	if (isObject(target)) {
+		for (const key in target) {
+			if (isUndefined(target[key])) delete target[key];
+		}
+	}
+
+	if (isArray(target)) {
+		for (let i = 0; i < target.length; i++) {
+			if (isUndefined(target[i])) target[i] = null;
+		}
+	}
+
+	return target;
+}
+
 /**
- * Prepare object for database storage.
+ * Prepare object for JSON storage.
  * @param target Object to prepare.
  */
 export function prepareObject(target: PlainObject): void {
@@ -158,7 +173,7 @@ export function prepareObject(target: PlainObject): void {
 }
 
 /**
- * Prepare array for database storage.
+ * Prepare array for JSON storage.
  * @param target Array to prepare.
  */
 export function prepareArray(target: unknown[]): void {
@@ -179,13 +194,37 @@ export function prepareArray(target: unknown[]): void {
 			continue;
 		}
 
-		if (isUndefined(value)) {
-			target[i] = null;
-			continue;
-		}
-
 		target[i] = null;
 	}
+}
+
+/**
+ * Sorting an array of documents by multiple fields.
+ * @param array Documents array to sort.
+ * @param query Sorting query.
+ * @returns Sorted array.
+ */
+export function sortDocuments<T extends Document>(array: T[], query: SortQuery): T[] {
+	const fields = Object.keys(query);
+
+	array.sort((a, b) => {
+		let index = 0;
+		let result = 0;
+
+		while (result === 0 && index < fields.length) {
+			const field = fields[index] as keyof T;
+			const order = query[field as string] === 'desc' ? -1 : 1;
+
+			if (a[field] < b[field]) result = -1 * order;
+			if (a[field] > b[field]) result = 1 * order;
+
+			index++;
+		}
+
+		return result;
+	});
+
+	return array;
 }
 
 /**
@@ -193,7 +232,7 @@ export function prepareArray(target: unknown[]): void {
  * @param target Target to check.
  * @returns Result of checking.
  */
- export function isPrimitive(target: unknown): target is DocumentPrimitive {
+export function isPrimitive(target: unknown): target is DocumentPrimitive {
 	const type = typeof target;
 	return type === 'string' || type === 'number' || type === 'boolean' || target === null;
 }

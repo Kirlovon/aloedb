@@ -1,9 +1,11 @@
  ![ToDo List Preview](https://github.com/Kirlovon/AloeDB/raw/master/examples/todo/preview.png)
+> Made for developers who are more comfortable reading code instead of documentation.
 
 <br>
 
-# ToDo List
-Simple to do list application, written with [Deno](https://deno.land/). The client part is written in pure JavaScript, and uses fetch to communicate with the server.
+# ToDo List 📑
+Simple to do list application, written with [Deno](https://deno.land/) & [AloeDB](https://github.com/Kirlovon/AloeDB). The client part is written in pure JavaScript, and uses fetch to communicate with the server.
+
 
 Powered by [AloeDB](https://github.com/Kirlovon/AloeDB), [Oak](https://github.com/oakserver/oak), [NanoID](https://github.com/ai/nanoid) & [Superstruct](https://github.com/ianstormtaylor/superstruct)! Also, uses path module from [std](https://deno.land/std@0.103.0/).
 

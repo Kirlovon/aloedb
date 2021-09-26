@@ -1,7 +1,7 @@
 // Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
 
 /**
- * Database initialization config
+ * Database initialization config.
  */
 export interface DatabaseConfig {
 
@@ -16,7 +16,7 @@ export interface DatabaseConfig {
 
 	/**
 	 * Automatically save data to the file after inserting, updating and deleting documents.
-	 * If `path` specified, data will be read from the file, but new data will not be written.
+	 * If set to false with `path` specified, data will be read from the file, but new data will not be written.
 	 */
 	autosave: boolean;
 
@@ -25,9 +25,12 @@ export interface DatabaseConfig {
 
 	/**
 	 * Optimize writing using batching. If enabled, the data will be written many times faster in case of a large number of operations.
-	 * Disable it if you want the methods to be considered executed only when the data is written to a file. _(Default: true)_
+	 * Disable it if you want the methods to be considered executed only when the data writteing is finished. _(Default: true)_
 	 */
-	batching: boolean | number;
+	batching: boolean;
+
+	// TODO: Finish
+	parser?: (content: string) => Document[];
 
 	/**
 	 * Runtime documents validation function.
@@ -35,7 +38,18 @@ export interface DatabaseConfig {
 	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
 	 */
 	validator?: (document: any) => void;
+}
 
+/**
+ * Options for database methods.
+ */
+export interface Options {
+
+	/** Automatically save data to the file after inserting, updating and deleting documents. */
+	autosave?: boolean;
+
+	/** Automatically deeply clone all returned objects. */
+	immutable?: boolean;
 }
 
 /** Checking the object for storage suitability. */
@@ -66,7 +80,10 @@ export type QueryFunction<T extends Document = Document> = (document: Readonly<T
 export type Update<T extends Document = Document> = { [K in keyof T]?: UpdateValue<T[K]> };
 
 /** Possible update values. */
-export type UpdateValue<T extends DocumentValue = DocumentValue> = T | ((value: T) => T) | undefined;
+export type UpdateValue<T extends DocumentValue = DocumentValue> = T | ((value: T, field: string, document: Document) => T) | undefined;
 
 /** Manual modifications applying. */
 export type UpdateFunction<T extends Document = Document> = (document: T) => T | null;
+
+/** Documents sort query. */
+export type SortQuery = { [key: string]: 'asc' | 'desc' };
