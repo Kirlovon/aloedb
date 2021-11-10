@@ -22,7 +22,7 @@ import {
 	isRegExp,
 	isString,
 	isUndefined,
-	numbersList
+	numbersList,
 } from './utils.ts';
 
 /**
@@ -177,11 +177,11 @@ export function matchValues(queryValue: QueryValue, documentValue: DocumentValue
 }
 
 /**
- * Parse database storage file.
+ * Deserialize database storage file.
  * @param content Content of the file.
  * @returns Array of documents.
  */
-export function parseDatabaseStorage(content: string): Document[] {
+export function deserializeStorage(content: string): Document[] {
 	const trimmed = content.trim();
 	if (trimmed === '') return [];
 

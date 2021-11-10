@@ -6,7 +6,7 @@ import {
 	findMultipleDocuments,
 	updateDocument,
 	matchValues,
-	parseDatabaseStorage
+	deserializeStorage
 } from '../lib/core.ts';
 
 Deno.test(`${yellow('[core.ts]')} findOneDocument (Single document)`, () => {
@@ -154,8 +154,8 @@ Deno.test(`${yellow('[core.ts]')} findMultipleDocuments (Search function)`, () =
 });
 
 Deno.test(`${yellow('[core.ts]')} updateDocument (Basic)`, () => {
-	const updated = updateDocument<any>({ test: 1, test2: 'foo', test3: true, test4: null, test6: 123 }, { test: 42, test2: 'bar', test3: false, test4: 'notNull', test5: 'NewField', test6: undefined });
-	assertEquals(updated, { test: 42, test2: 'bar', test3: false, test4: 'notNull', test5: 'NewField' });
+	const updated = updateDocument<any>({ test: 1, test2: 'foo', test3: true, test4: null, test6: 123 }, { test: 42, test2: 'bar', test3: false, test4: 'notNull', test5: 'NewField' });
+	assertEquals(updated, { test: 42, test2: 'bar', test3: false, test4: 'notNull', test5: 'NewField', test6: 123 });
 });
 
 Deno.test(`${yellow('[core.ts]')} updateDocument (Partly)`, () => {
@@ -205,14 +205,6 @@ Deno.test(`${yellow('[core.ts]')} updateDocument (Update field function)`, () =>
 	);
 
 	assertEquals(updated, { test: 'foobar', test2: { value: 0 }, test3: [1, 2, 3, 4] });
-});
-
-Deno.test(`${yellow('[core.ts]')} updateDocument (Empty object)`, () => {
-	const updated = updateDocument<any>(
-		{ test: true },
-		{ test: undefined }
-	);
-	assertEquals(updated, {});
 });
 
 Deno.test(`${yellow('[core.ts]')} updateDocument (Deletion)`, () => {
@@ -272,20 +264,20 @@ Deno.test(`${yellow('[core.ts]')} matchValues (Advanced Invalid)`, () => {
 });
 
 
-Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage`, () => {
-	const result = parseDatabaseStorage('[{"foo":"bar"}, {}]');
+Deno.test(`${yellow('[core.ts]')} deserializeStorage`, () => {
+	const result = deserializeStorage('[{"foo":"bar"}, {}]');
 	assertEquals(result, [{foo: 'bar'}]);
 });
 
-Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Empty file)`, () => {
-	const result = parseDatabaseStorage('');
+Deno.test(`${yellow('[core.ts]')} deserializeStorage (Empty file)`, () => {
+	const result = deserializeStorage('');
 	assertEquals(result, []);
 });
 
-Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Not an Array)`, () => {
-	assertThrows(() => parseDatabaseStorage('true'), undefined, 'should be an array of objects')
+Deno.test(`${yellow('[core.ts]')} deserializeStorage (Not an Array)`, () => {
+	assertThrows(() => deserializeStorage('true'), undefined, 'should be an array of objects')
 });
 
-Deno.test(`${yellow('[core.ts]')} parseDatabaseStorage (Invalid Array)`, () => {
-	assertThrows(() => parseDatabaseStorage('[true]'), undefined, 'should contain only objects')
+Deno.test(`${yellow('[core.ts]')} deserializeStorage (Invalid Array)`, () => {
+	assertThrows(() => deserializeStorage('[true]'), undefined, 'should contain only objects')
 });

@@ -20,7 +20,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const writer = new Writer(TEMP_PATH + '/test_storage_1.json', false);
+		const writer = new Writer(TEMP_PATH + '/test_storage_1.json', false, false);
 
 		await writer.write([{ foo: 'bar' }]);
 
@@ -35,7 +35,7 @@ Deno.test({
 	sanitizeOps: false,
 
 	async fn() {
-		const writer = new Writer(TEMP_PATH + '/test_storage_2.json', false);
+		const writer = new Writer(TEMP_PATH + '/test_storage_2.json', false, false);
 
 		writer.write([{ foo: 'old' }]);
 		writer.write([{ foo: 'new' }]);

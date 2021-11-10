@@ -20,14 +20,18 @@ export class Writer {
 	/** Write data in easy-to-read format. */
 	private readonly pretty: boolean;
 
+	/** Write data in easy-to-read format. */
+	private readonly foolproof: boolean;
+
 	/**
 	 * Writer initialization.
 	 * @param path Path to the database file.
 	 * @param pretty Write data in easy-to-read format.
 	 */
-	constructor(path: string, pretty: boolean) {
+	constructor(path: string, pretty: boolean, foolproof: boolean) {
 		this.path = path;
 		this.pretty = pretty;
+		this.foolproof = foolproof;
 	}
 
 	/**
@@ -54,6 +58,15 @@ export class Writer {
 			// Atomic write
 			await Deno.writeTextFile(temp, serialized);
 			await Deno.rename(temp, this.path);
+
+		} catch (error) {
+
+			// Throw error only if foolproof disabled
+			if (this.foolproof) {
+				console.error(error);
+			} else {
+				throw error;
+			}
 
 		} finally {
 			this.locked = false;

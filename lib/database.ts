@@ -8,7 +8,7 @@ import {
 	findOneDocument,
 	findMultipleDocuments,
 	updateDocument,
-	parseDatabaseStorage
+	deserializeStorage
 } from './core.ts';
 
 import {
@@ -32,11 +32,11 @@ import {
 	isArray,
 	isObject,
 	isFunction,
-	isUndefined
+	isUndefined,
+	sanitizeObject
 } from './utils.ts';
 
 // TODO: Add new cursor methods: filter, map, forEach, reverse
-// TODO: Remove prepareObject and allow dates and other types via parser (Optional)
 // TODO: Finish testing
 
 /**
@@ -66,7 +66,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		autosave: true,
 		batching: true,
 		immutable: true,
-		parser: undefined,
+		sanitize: true,
+		foolproof: true,
 		validator: undefined
 	};
 
@@ -87,7 +88,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		// Writer initialization
 		if (this.config.path) {
-			this.writer = new Writer(this.config.path, this.config.pretty);
+			this.writer = new Writer(this.config.path, this.config.pretty, this.config.foolproof);
 			if (this.config.autoload) this.loadSync();
 		}
 	}
@@ -95,11 +96,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
 	 * Select documents by search query.
 	 * @param query Documents selection criteria.
-	 * @param options Additional configurations.
 	 * @returns Cursor instance.
 	 */
-	public select(query?: Query<Schema> | QueryFunction<Schema>, options?: Options) {
-		return new Cursor<Schema>(this, query, options);
+	public select(query?: Query<Schema> | QueryFunction<Schema>) {
+		return new Cursor<Schema>(this, query);
 	}
 
 	/**
@@ -111,12 +111,13 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	public async insertOne(document: Schema, options?: Options): Promise<Schema> {
 		if (!isObject(document)) throw new TypeError('Document must be an object');
 
-		let { immutable, validator, autosave } = this.config;
+		let { immutable, validator, autosave, sanitize } = this.config;
 		if (options) {
 			if (isBoolean(options.autosave)) autosave = options.autosave;
 			if (isBoolean(options.immutable)) immutable = options.immutable;
 		}
 
+		if (sanitize) sanitizeObject(document);
 		if (validator) validator(document);
 		if (isObjectEmpty(document)) return {} as Schema;
 
@@ -136,7 +137,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	public async insertMany(documents: Schema[], options?: Options): Promise<Schema[]> {
 		if (!isArray(documents)) throw new TypeError('Input must be an array');
 
-		let { immutable, validator, autosave } = { ...this.config };
+		let { immutable, validator, autosave, sanitize } = this.config;
 		if (options) {
 			if (isBoolean(options.autosave)) autosave = options.autosave;
 			if (isBoolean(options.immutable)) immutable = options.immutable;
@@ -148,6 +149,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			const document: Schema = documents[i];
 			if (!isObject(document)) throw new TypeError('Documents must be an objects');
 
+			if (sanitize) sanitizeObject(document);
 			if (validator) validator(document);
 			if (isObjectEmpty(document)) continue;
 
@@ -221,7 +223,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-		let { validator, autosave, immutable } = this.config;
+		let { validator, autosave, immutable, sanitize } = this.config;
 		if (options) {
 			if (isBoolean(options.autosave)) autosave = options.autosave;
 			if (isBoolean(options.immutable)) immutable = options.immutable;
@@ -234,6 +236,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		const document: Schema = this.documents[position];
 		const updated: Schema = updateDocument<Schema>(document, update);
 
+		if (sanitize) sanitizeObject(updated);
 		if (validator) validator(updated);
 
 		if (isObjectEmpty(updated)) {
@@ -259,7 +262,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
-		let { validator, autosave, immutable } = this.config;
+		let { validator, autosave, immutable, sanitize } = this.config;
 		if (options) {
 			if (isBoolean(options.autosave)) autosave = options.autosave;
 			if (isBoolean(options.immutable)) immutable = options.immutable;
@@ -277,6 +280,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 			const document: Schema = temporary[position];
 			const updated: Schema = updateDocument<Schema>(document, update);
 
+			if (sanitize) sanitizeObject(updated);
 			if (validator) validator(updated);
 
 			if (isObjectEmpty(updated)) {
@@ -383,9 +387,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!path) return;
 
 		const content: string = await Reader.read(path);
-		const documents: Document[] = parseDatabaseStorage(content);
+		const documents: Document[] = deserializeStorage(content);
 
-		// Schema validation
 		if (validator) {
 			for (let i = 0; i < documents.length; i++) validator(documents[i])
 		}
@@ -401,9 +404,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (!path) return;
 
 		const content: string = Reader.readSync(path);
-		const documents: Document[] = parseDatabaseStorage(content);
+		const documents: Document[] = deserializeStorage(content);
 
-		// Schema validation
 		if (validator) {
 			for (let i = 0; i < documents.length; i++) validator(documents[i])
 		}

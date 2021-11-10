@@ -29,8 +29,13 @@ export interface DatabaseConfig {
 	 */
 	batching: boolean;
 
-	// TODO: Finish
-	parser?: (content: string) => Document[];
+	sanitize: boolean;
+
+	/**
+	 * Prevent throwing an error when writing data.
+	 * If enabled, the error text will be written to the console instead of throwing it.
+	 */
+	foolproof: boolean;
 
 	/**
 	 * Runtime documents validation function.

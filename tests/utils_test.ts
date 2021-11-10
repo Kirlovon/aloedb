@@ -10,8 +10,8 @@ import {
 	getPathDirname,
 	deepClone,
 	deepCompare,
-	prepareArray,
-	prepareObject,
+	sanitizeArray,
+	sanitizeObject,
 	sortDocuments,
 	isPrimitive,
 	isString,
@@ -165,7 +165,7 @@ Deno.test(`${green('[utils.ts]')} deepCompare (Objects & Arrays)`, () => {
 	assertEquals(deepCompare(object, { a: 1, b: 'test', c: true, d: null }), false);
 });
 
-Deno.test(`${green('[utils.ts]')} prepareArray`, () => {
+Deno.test(`${green('[utils.ts]')} sanitizeArray`, () => {
 	const array = [
 		1,
 		'bar',
@@ -177,11 +177,11 @@ Deno.test(`${green('[utils.ts]')} prepareArray`, () => {
 		[null, undefined, { test: new Map(), test2: undefined }],
 	];
 
-	prepareArray(array);
+	sanitizeArray(array);
 	assertEquals(array, [1, 'bar', true, null, null, null, { test: null, test3: [1, 2, 3] }, [null, null, {}]]);
 });
 
-Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
+Deno.test(`${green('[utils.ts]')} sanitizeObject`, () => {
 	const object: any = {
 		a: 1,
 		b: 'foo',
@@ -192,7 +192,7 @@ Deno.test(`${green('[utils.ts]')} prepareObject`, () => {
 		g: [1, 2, undefined, new Date()],
 	};
 
-	prepareObject(object);
+	sanitizeObject(object);
 	assertEquals(object, {
 		a: 1,
 		b: 'foo',

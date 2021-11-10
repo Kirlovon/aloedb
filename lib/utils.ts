@@ -130,27 +130,11 @@ export function deepCompare(targetA: unknown, targetB: unknown): boolean {
 	return targetA === targetB;
 }
 
-export function cleanUndefinedValues<T>(target: T): T {
-	if (isObject(target)) {
-		for (const key in target) {
-			if (isUndefined(target[key])) delete target[key];
-		}
-	}
-
-	if (isArray(target)) {
-		for (let i = 0; i < target.length; i++) {
-			if (isUndefined(target[i])) target[i] = null;
-		}
-	}
-
-	return target;
-}
-
 /**
- * Prepare object for JSON storage.
- * @param target Object to prepare.
+ * Prepare object for JSON storage. Simmilar to `JSON.parse(JSON.stringify(target))`, but does not create a deep copy.
+ * @param target Object to sanitize.
  */
-export function prepareObject(target: PlainObject): void {
+export function sanitizeObject(target: PlainObject): void {
 	for (const key in target) {
 		const value: unknown = target[key];
 
@@ -159,12 +143,12 @@ export function prepareObject(target: PlainObject): void {
 		}
 
 		if (isArray(value)) {
-			prepareArray(value);
+			sanitizeArray(value);
 			continue;
 		}
 
 		if (isObject(value)) {
-			prepareObject(value);
+			sanitizeObject(value);
 			continue;
 		}
 
@@ -173,10 +157,10 @@ export function prepareObject(target: PlainObject): void {
 }
 
 /**
- * Prepare array for JSON storage.
- * @param target Array to prepare.
+ * Prepare array for JSON storage. Simmilar to `JSON.parse(JSON.stringify(target))`, but does not create a deep copy.
+ * @param target Array to sanitize.
  */
-export function prepareArray(target: unknown[]): void {
+export function sanitizeArray(target: unknown[]): void {
 	for (let i = 0; i < target.length; i++) {
 		const value: unknown = target[i];
 
@@ -185,12 +169,12 @@ export function prepareArray(target: unknown[]): void {
 		}
 
 		if (isArray(value)) {
-			prepareArray(value);
+			sanitizeArray(value);
 			continue;
 		}
 
 		if (isObject(value)) {
-			prepareObject(value);
+			sanitizeObject(value);
 			continue;
 		}
 

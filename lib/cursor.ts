@@ -43,19 +43,14 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 	/** Documents selection criteria. */
 	private query?: Query<Schema> | QueryFunction<Schema>;
 
-	/** Additional configurations. */
-	private options?: Options;
-
 	/**
 	 * Cursor initialization
 	 * @param instance Database instance.
 	 * @param query Documents selection criteria.
-	 * @param options Additional configurations.
 	 */
-	constructor(instance: Database<Schema>, query?: Query<Schema> | QueryFunction<Schema>, options?: any) {
+	constructor(instance: Database<Schema>, query?: Query<Schema> | QueryFunction<Schema>) {
 		this.instance = instance;
 		this.query = query;
-		this.options = options;
 	}
 
 	/**
@@ -127,7 +122,7 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 	private async execute(): Promise<Schema[]> {
 
 		// Select documents
-		let documents: Schema[] = await this.instance.findMany(this.query, this.options);
+		let documents: Schema[] = await this.instance.findMany(this.query);
 
 		// Execute cursor methods
 		for (let i = 0; i < this.methods.length; i++) {
