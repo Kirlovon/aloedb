@@ -496,9 +496,9 @@ console.log(db.documents); // [{ field: 'The Nights' }]
 ## 🦄 Community Ports
 Surprisingly, this library was ported to other programming languages without my participation. **Much appreciation to this guys for their work!** ❤
 
-🔵 **[AlgoeDB](https://github.com/wkirk01/AlgoeDB)** - database for Go, made by [wkirk01](https://github.com/wkirk01)!
+🔵 **[AlgoeDB](https://github.com/billykirk01/AlgoeDB)** - database for Go, made by [billykirk01](https://github.com/billykirk01)!
 
-🟠 **[AlroeDB](https://github.com/wkirk01/AlroeDB)** - database for Rust, also made by [wkirk01](https://github.com/wkirk01)!
+🟠 **[AlroeDB](https://github.com/billykirk01/AlroeDB)** - database for Rust, also made by [billykirk01](https://github.com/billykirk01)!
 
 🟢 **[AloeDB-Node](https://github.com/wouterdebruijn/AloeDB-Node)** - port to the Node.js, made by [Wouter de Bruijn](https://github.com/wouterdebruijn)! _(With awesome Active Records example)_
 
