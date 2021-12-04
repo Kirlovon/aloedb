@@ -36,7 +36,9 @@ import {
 	sanitizeObject
 } from './utils.ts';
 
+// TODO: Add sort, limit, skip as options
 // TODO: Add new cursor methods: filter, map, forEach, reverse
+// TODO: Add projections
 // TODO: Finish testing
 
 /**

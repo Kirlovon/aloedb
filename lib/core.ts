@@ -7,7 +7,8 @@ import {
 	QueryValue,
 	QueryFunction,
 	Update,
-	UpdateFunction
+	UpdateFunction,
+	Projection
 } from './types.ts';
 
 import {
@@ -174,6 +175,22 @@ export function matchValues(queryValue: QueryValue, documentValue: DocumentValue
 	}
 
 	return false;
+}
+
+/**
+ * Determine which document fields are returned.
+ * @param document Document to project.
+ * @param projection Projection query.
+ * @returns Document with applied projection query.
+ */
+export function executeProjection<T extends Document>(document: T, projection: Projection<T> ): Partial<T> {
+	const projected: Partial<T> = {};
+
+	for(const key in projection) {
+		if (projection[key]) projected[key] = document[key];
+	}
+
+	return projected;
 }
 
 /**

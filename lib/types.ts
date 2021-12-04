@@ -92,3 +92,6 @@ export type UpdateFunction<T extends Document = Document> = (document: T) => T |
 
 /** Documents sort query. */
 export type SortQuery = { [key: string]: 'asc' | 'desc' };
+
+/** Projection parameter */
+export type Projection<T extends Document> = Partial<{ [K in keyof T]: boolean | number }>;

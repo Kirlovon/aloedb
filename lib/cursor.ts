@@ -5,8 +5,7 @@ import {
 	Query,
 	QueryFunction,
 	Acceptable,
-	SortQuery,
-	Options
+	SortQuery
 } from './types.ts';
 
 import {
@@ -148,3 +147,4 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 		return documents;
 	}
 }
+
