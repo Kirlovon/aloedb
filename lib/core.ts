@@ -1,6 +1,11 @@
 // Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
 
 import {
+	Cursor,
+	CursorMethod
+} from './cursor.ts';
+
+import {
 	Document,
 	DocumentValue,
 	Query,
@@ -8,7 +13,8 @@ import {
 	QueryFunction,
 	Update,
 	UpdateFunction,
-	Projection
+	Projection,
+	Options
 } from './types.ts';
 
 import {
@@ -23,7 +29,7 @@ import {
 	isRegExp,
 	isString,
 	isUndefined,
-	numbersList,
+	numbersList
 } from './utils.ts';
 
 /**
@@ -178,15 +184,32 @@ export function matchValues(queryValue: QueryValue, documentValue: DocumentValue
 }
 
 /**
+ * Execute database options.
+ * @param documents Documents to process.
+ * @param options Options to execute.
+ * @returns Document with applied options.
+ */
+export function executeOptions<T extends Document>(documents: T[], options: Options): Partial<T[]> {
+	for (const key in options) {
+		if (key === 'sort' || key === 'limit' || key === 'skip') {
+			const method = { type: key, parameter: options[key] } as CursorMethod;
+			documents = Cursor.executeMethod(documents, method);
+		}
+	}
+
+	return documents;
+}
+
+/**
  * Determine which document fields are returned.
  * @param document Document to project.
  * @param projection Projection query.
  * @returns Document with applied projection query.
  */
-export function executeProjection<T extends Document>(document: T, projection: Projection<T> ): Partial<T> {
+export function executeProjection<T extends Document>(document: T, projection: Projection<T>): Partial<T> {
 	const projected: Partial<T> = {};
 
-	for(const key in projection) {
+	for (const key in projection) {
 		if (projection[key]) projected[key] = document[key];
 	}
 

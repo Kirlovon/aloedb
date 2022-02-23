@@ -8,7 +8,8 @@ import {
 	findOneDocument,
 	findMultipleDocuments,
 	updateDocument,
-	deserializeStorage
+	deserializeStorage,
+	executeProjection
 } from './core.ts';
 
 import {
@@ -19,7 +20,8 @@ import {
 	Update,
 	UpdateFunction,
 	Acceptable,
-	Options
+	Projection,
+	Options,
 } from './types.ts';
 
 import {
@@ -39,6 +41,7 @@ import {
 // TODO: Add sort, limit, skip as options
 // TODO: Add new cursor methods: filter, map, forEach, reverse
 // TODO: Add projections
+// TODO: Add events like beforeInsert, afterInsert, beforeUpdate, afterUpdate, beforeDelete, afterDelete
 // TODO: Finish testing
 
 /**
@@ -110,14 +113,11 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Inserted document.
 	 */
-	public async insertOne(document: Schema, options?: Options): Promise<Schema> {
+	public async insertOne(document: Schema, options?: Partial<Options>): Promise<Schema> {
 		if (!isObject(document)) throw new TypeError('Document must be an object');
 
 		let { immutable, validator, autosave, sanitize } = this.config;
-		if (options) {
-			if (isBoolean(options.autosave)) autosave = options.autosave;
-			if (isBoolean(options.immutable)) immutable = options.immutable;
-		}
+		if (options && isBoolean(options.immutable)) immutable = options.immutable;
 
 		if (sanitize) sanitizeObject(document);
 		if (validator) validator(document);
@@ -136,14 +136,11 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Array of inserted documents.
 	 */
-	public async insertMany(documents: Schema[], options?: Options): Promise<Schema[]> {
+	public async insertMany(documents: Schema[], options?: Partial<Options>): Promise<Schema[]> {
 		if (!isArray(documents)) throw new TypeError('Input must be an array');
 
 		let { immutable, validator, autosave, sanitize } = this.config;
-		if (options) {
-			if (isBoolean(options.autosave)) autosave = options.autosave;
-			if (isBoolean(options.immutable)) immutable = options.immutable;
-		}
+		if (options && isBoolean(options.immutable)) immutable = options.immutable;
 
 		const inserted: Schema[] = [];
 
@@ -171,7 +168,9 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Found document.
 	 */
-	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'autosave'>): Promise<Schema | null> {
+	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema | null>;
+	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>, projection?: Projection<Schema>): Promise<Partial<Schema> | null>;
+	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>, projection?: Projection<Schema>): Promise<Schema | Partial<Schema> | null> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
 		let { immutable } = this.config;
@@ -180,8 +179,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
 
-		const document: Schema = this.documents[found];
-		return immutable ? deepClone(document) : document;
+		const document = immutable ? deepClone(this.documents[found]) : this.documents[found];
+
+		if (isObject(projection)) return executeProjection<Schema>(document, projection);
+		return document;
 	}
 
 	/**
@@ -190,7 +191,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Found documents.
 	 */
-	public async findMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'autosave'>): Promise<Schema[]> {
+	public async findMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema[]> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 
 		let { immutable } = this.config;
@@ -204,7 +205,8 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
 
-		const documents: Schema[] = [];
+		let documents: Schema[] = [];
+
 		for (let i = 0; i < found.length; i++) {
 			const position: number = found[i];
 			const document: Schema = this.documents[position];
@@ -221,15 +223,12 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Found document with applied modifications.
 	 */
-	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Options): Promise<Schema | null> {
+	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Partial<Options>): Promise<Schema | null> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
 		let { validator, autosave, immutable, sanitize } = this.config;
-		if (options) {
-			if (isBoolean(options.autosave)) autosave = options.autosave;
-			if (isBoolean(options.immutable)) immutable = options.immutable;
-		}
+		if (options && isBoolean(options.immutable)) immutable = options.immutable;
 
 		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
@@ -260,15 +259,12 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Found documents with applied modifications.
 	 */
-	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Options): Promise<Schema[]> {
+	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Partial<Options>): Promise<Schema[]> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
 		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
 
 		let { validator, autosave, immutable, sanitize } = this.config;
-		if (options) {
-			if (isBoolean(options.autosave)) autosave = options.autosave;
-			if (isBoolean(options.immutable)) immutable = options.immutable;
-		}
+		if (options && isBoolean(options.immutable)) immutable = options.immutable;
 
 		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
@@ -308,11 +304,9 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Deleted document.
 	 */
-	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'immutable'>): Promise<Schema | null> {
+	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema | null> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-
-		let { autosave } = this.config;
-		if (options && isBoolean(options.autosave)) autosave = options.autosave;
+		const { autosave } = this.config;
 
 		const found: number | null = findOneDocument<Schema>(query, this.documents);
 		if (isNull(found)) return null;
@@ -332,11 +326,9 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	 * @param options Additional configurations.
 	 * @returns Array of deleted documents.
 	 */
-	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Omit<Options, 'immutable'>): Promise<Schema[]> {
+	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema[]> {
 		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-
-		let { autosave } = this.config;
-		if (options && isBoolean(options.autosave)) autosave = options.autosave;
+		const { autosave } = this.config;
 
 		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		if (found.length === 0) return [];
@@ -371,6 +363,21 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 
 		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
 		return found.length;
+	}
+
+	/**
+	 * Check if document exists.
+	 * @param query Documents selection criteria.
+	 * @returns True if document exists.
+	 */
+	public async exists(query?: Query<Schema> | QueryFunction<Schema>): Promise<boolean> {
+		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
+
+		// Optimization for empty queries
+		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return true;
+
+		const found = findOneDocument<Schema>(query, this.documents);
+		return !isNull(found);
 	}
 
 	/**

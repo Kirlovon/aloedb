@@ -16,16 +16,16 @@ import {
 } from './utils.ts';
 
 /** Cursor skipping method. */
-type SkipMethod = { type: 'skip', parameter: number };
+export type SkipMethod = { type: 'skip', parameter: number };
 
 /** Cursor sorting method. */
-type SortMethod = { type: 'sort', parameter: SortQuery };
+export type SortMethod = { type: 'sort', parameter: SortQuery };
 
 /** Cursor limiting method. */
-type LimitMethod = { type: 'limit', parameter: number };
+export type LimitMethod = { type: 'limit', parameter: number };
 
 /** All Cursor methods. */
-type CursorMethod = SkipMethod | SortMethod | LimitMethod;
+export type CursorMethod = SkipMethod | SortMethod | LimitMethod;
 
 /**
  * Database Cursor.
@@ -76,13 +76,11 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 
 	/**
 	 * Sort documents by sort query.
-	 * @param sort Documents sort query. If string, will be sorted by specfied field in ascecending order.
+	 * @param sort Documents sort query.
 	 * @returns Cursor instance.
 	 */
-	public sort(sort: SortQuery | string): this {
-		if (isString(sort)) sort = { [sort]: 'asc' };
+	public sort(sort: SortQuery): this {
 		if (!isObject(sort)) throw new TypeError('Sort query must be a string or an object');
-
 		this.methods.push({ type: 'sort', parameter: sort });
 		return this;
 	}
@@ -115,7 +113,7 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 	}
 
 	/**
-	 * Execute cursor methods.
+	 * Execute cursor methods & get the result.
 	 * @returns Documents found by cursor.
 	 */
 	private async execute(): Promise<Schema[]> {
@@ -126,22 +124,31 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 		// Execute cursor methods
 		for (let i = 0; i < this.methods.length; i++) {
 			const method = this.methods[i];
+
 			if (documents.length === 0) return [];
+			documents = Cursor.executeMethod(documents, method);
+		}
 
-			if (method.type === 'skip') {
-				documents = documents.slice(method.parameter);
-				continue;
-			}
+		return documents;
+	}
 
-			if (method.type === 'sort') {
-				documents = sortDocuments(documents, method.parameter);
-				continue;
-			}
+	/**
+	 * Execute cursor method.
+	 * @param documents Documents to process.
+	 * @param method Cursor method.
+	 * @returns Array with documents processed by cursor method.
+	 */
+	public static executeMethod<T extends Document>(documents: T[], method: CursorMethod): T[] {
+		if (method.type === 'skip') {
+			return documents.slice(method.parameter);
+		}
 
-			if (method.type === 'limit') {
-				documents = documents.slice(0, method.parameter);
-				continue;
-			}
+		if (method.type === 'sort') {
+			return sortDocuments(documents, method.parameter)
+		}
+
+		if (method.type === 'limit') {
+			return documents.slice(0, method.parameter);
 		}
 
 		return documents;

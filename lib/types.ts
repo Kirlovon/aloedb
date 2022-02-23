@@ -50,11 +50,17 @@ export interface DatabaseConfig {
  */
 export interface Options {
 
-	/** Automatically save data to the file after inserting, updating and deleting documents. */
-	autosave?: boolean;
+	/** Sorting documents by field value. */
+	sort: SortQuery;
+
+	/** Skipping N-th number of documents. */
+	skip: number;
+
+	/** Limit the maximum number of documents. */
+	limit: number;
 
 	/** Automatically deeply clone all returned objects. */
-	immutable?: boolean;
+	immutable: boolean;
 }
 
 /** Checking the object for storage suitability. */
@@ -93,5 +99,5 @@ export type UpdateFunction<T extends Document = Document> = (document: T) => T |
 /** Documents sort query. */
 export type SortQuery = { [key: string]: 'asc' | 'desc' };
 
-/** Projection parameter */
-export type Projection<T extends Document> = Partial<{ [K in keyof T]: boolean | number }>;
+/** Projection query. */
+export type Projection<T extends Document> = Partial<{ [K in keyof T]: boolean }>;

@@ -170,6 +170,11 @@ console.log(found1); // { key: 1, value: 'one' }
 // Advanced query with search function
 const found2 = await db.findOne((document: any) => document.key === 2);
 console.log(found2); // { key: 2, value: 'two' }
+
+// Query with regular expression
+const found3 = await db.findOne({ key: /three/ });
+console.log(found2); // { key: 3, value: 'three' }
+
 ```
 
 When specifying **Arrays** or **Objects**, a deep comparison will be performed.
@@ -182,6 +187,18 @@ await db.insertMany([
 
 const found = await db.findOne({ values: [1, 2, 3] });
 console.log(found); // { key: 2, values: [1, 2, 3] }
+```
+
+Also, we have premade querying functions called [Helpers](https://github.com/Kirlovon/AloeDB#helpers):
+
+```typescript
+import { Database, includes } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
+
+const db = new Database();
+await db.insertOne({ test: [1, 2, 3] });
+
+const found = await db.findOne({ test: includes(2) });
+console.log(found); // { test: [1, 2, 3] }
 ```
 
 <br>
@@ -256,26 +273,6 @@ await db.findOne({ foo: 'bar' });
 ```
 Returns a document that matches the search query. Returns `null` if nothing found.
 
-### FindOne with RegExp
-```typescript
-await db.insertOne({ text: 'sOmE TeXt'});
-
-// Using regular expressions
-await db.findOne({
-	text: new RegExp('some text', 'i')
-});
-```
-It wouldn't find "some text" because it's case sensitive by default search.
-To search case insensetively, use below as well:
-```typescript
-// Using search function
-await db.findOne({
-	text: (value: any) => value.toLowerCase() === 'some text'
-});
-```
-
-For fuzzy search, please, refer to [FuseJS](https://fusejs.io/)
-
 <br>
 
 ### FindMany
@@ -283,18 +280,6 @@ For fuzzy search, please, refer to [FuseJS](https://fusejs.io/)
 await db.findMany({ foo: 'bar' });
 ```
 Returns an array of documents matching the search query.
-
-### FindMany with RegExp
-```typescript
-await db.insertOne({ title: 'How To Use Linux?' });
-await db.insertOne({ title: 'Most popular linux distributions' });
-
-const result = await db.findMany({
-	title: new RegExp('linux', 'i')
-});
-
-console.log(result); // [ { title: "How To Use Linux?" }, { title: "Most popular linux distributions" } ]
-```
 
 <br>
 
@@ -379,7 +364,7 @@ Saves documents from memory to a database file. If the `optimize` parameter is *
 <br>
 
 ### Helpers
-This module contains helper functions that will make it easier to write and read search queries.
+This module contains helper functions that will make it easier to write search queries.
 
  ```typescript
  // Importing database & helpers

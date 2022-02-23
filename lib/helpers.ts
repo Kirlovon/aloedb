@@ -128,7 +128,7 @@ export function and(...queries: QueryValue[]) {
 
 /**
  * Logical OR operator. Selects documents where the value of a field equals at least one specified value.
- * @param values Query values.
+ * @param queries Query values.
  */
 export function or(...queries: QueryValue[]) {
 	return (target: Readonly<DocumentValue>) => queries.some(query => matchValues(query, target as DocumentValue));
@@ -136,7 +136,7 @@ export function or(...queries: QueryValue[]) {
 
 /**
  * Logical NOT operator. Selects documents where the value of a field not equal to specified value.
- * @param value Query value.
+ * @param query Query value.
  */
 export function not(query: QueryValue) {
 	return (target: Readonly<DocumentValue>) => matchValues(query, target as DocumentValue) === false;

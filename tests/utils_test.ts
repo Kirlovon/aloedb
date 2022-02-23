@@ -64,9 +64,9 @@ Deno.test(`${green('[utils.ts]')} getPathDirname`, () => {
 	assertEquals(getPathDirname('foo.json'), '');
 	assertEquals(getPathDirname('./foo/bar.json'), './foo');
 	assertEquals(getPathDirname('foo/bar/baz.json'), 'foo/bar');
-	assertEquals(getPathDirname('/foo/bar.json'), 'foo');
-	assertEquals(getPathDirname('//foo//bar.json'), 'foo');
-	assertEquals(getPathDirname('\\foo\\bar.json'), 'foo');
+	assertEquals(getPathDirname('/foo/bar.json'), '/foo');
+	assertEquals(getPathDirname('//foo//bar.json'), '/foo');
+	assertEquals(getPathDirname('\\foo\\bar.json'), '/foo');
 });
 
 Deno.test(`${green('[utils.ts]')} deepClone (Primitives)`, () => {

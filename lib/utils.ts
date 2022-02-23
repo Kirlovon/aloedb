@@ -54,10 +54,10 @@ export function getObjectLength(target: PlainObject): number {
  * @returns Filename from the path.
  */
 export function getPathFilename(path: string): string {
-	const parsed = path.split(/[\\\/]/);
+	const parsed = path.replace(/(\\+)|(\/+)/g, '/').split('/');
 	const filename = parsed.pop();
 
-	return filename ? filename : '';
+	return filename ? filename.trim() : '';
 }
 
 /**
@@ -66,12 +66,10 @@ export function getPathFilename(path: string): string {
  * @returns Dirname from the path.
  */
 export function getPathDirname(path: string): string {
-	let parsed = path.split(/[\\\/]/);
-	parsed = parsed.map(value => value.trim());
-	parsed = parsed.filter(value => value !== '');
-	parsed.pop();
+	const parsed = path.replace(/(\\+)|(\/+)/g, '/').split('/');
+	const dirname = parsed.map(value => value.trim()).slice(0, -1).join('/');
 
-	return parsed.join('/');
+	return dirname ? dirname : '';
 }
 
 /**
