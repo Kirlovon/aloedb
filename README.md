@@ -238,6 +238,14 @@ Inserts a document into the database. After insertion, it returns the inserted d
 
 All fields with `undefined` values will be deleted. Empty documents will not be inserted.
 
+By default, the document will be inserted as the last entry in the database. To insert it somewhere else, specify the optional `index` parameter:
+
+```typescript
+await db.insertOne({ foo: 'bar' }, 9);
+```
+
+If the provided `index` is greater than the number of database entries, it will be inserted at the end.
+
 <br>
 
 ### InsertMany
