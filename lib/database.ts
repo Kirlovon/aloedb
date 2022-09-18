@@ -65,9 +65,10 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 	/**
 	 * Insert a document.
 	 * @param document Document to insert.
+	 * @param index Where to insert document.
 	 * @returns Inserted document.
 	 */
-	public async insertOne(document: Schema): Promise<Schema> {
+	public async insertOne(document: Schema, index: Number = this.documents.length): Promise<Schema> {
 		const { immutable, validator, autosave } = this.config;
 		if (!isObject(document)) throw new TypeError('Document must be an object');
 
@@ -76,7 +77,7 @@ export class Database<Schema extends Acceptable<Schema> = Document> {
 		if (isObjectEmpty(document)) return {} as Schema;
 
 		const internal: Schema = deepClone(document);
-		this.documents.push(internal);
+		this.documents.splice(index, 0, internal);
 		if (autosave) await this.save();
 
 		return immutable ? deepClone(internal) : internal;
