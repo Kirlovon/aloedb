@@ -8,3 +8,6 @@ temp/
 # Scripts
 *.bat
 *.cmd
+
+# Test files
+test.ts 

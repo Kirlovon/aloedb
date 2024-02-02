@@ -1,103 +1,103 @@
-// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+// deno-lint-ignore-file ban-types
 
-/**
- * Database initialization config.
- */
-export interface DatabaseConfig {
-
-	/** Path to the database file. If undefined, data will be stored only in-memory. _(Default: undefined)_ */
-	path?: string;
-
-	/** Save data in easy-to-read format. _(Default: true)_ */
-	pretty: boolean;
-
-	/** Automatically load the file synchronously when initializing the database. _(Default: true)_ */
-	autoload: boolean;
-
-	/**
-	 * Automatically save data to the file after inserting, updating and deleting documents.
-	 * If set to false with `path` specified, data will be read from the file, but new data will not be written.
-	 */
-	autosave: boolean;
-
-	/** Automatically deeply clone all returned objects. _(Default: true)_ */
-	immutable: boolean;
-
-	/**
-	 * Optimize writing using batching. If enabled, the data will be written many times faster in case of a large number of operations.
-	 * Disable it if you want the methods to be considered executed only when the data writteing is finished. _(Default: true)_
-	 */
-	batching: boolean;
-
-	sanitize: boolean;
-
-	/**
-	 * Prevent throwing an error when writing data.
-	 * If enabled, the error text will be written to the console instead of throwing it.
-	 */
-	foolproof: boolean;
-
-	/**
-	 * Runtime documents validation function.
-	 * If the document does not pass the validation, just throw the error.
-	 * Works well with [Superstruct](https://github.com/ianstormtaylor/superstruct)!
-	 */
-	validator?: (document: any) => void;
+/** Document base structure. */
+export interface Base {
+	_id: string;
 }
 
-/**
- * Options for database methods.
- */
-export interface Options {
-
-	/** Sorting documents by field value. */
-	sort: SortQuery;
-
-	/** Skipping N-th number of documents. */
-	skip: number;
-
-	/** Limit the maximum number of documents. */
-	limit: number;
-
-	/** Automatically deeply clone all returned objects. */
-	immutable: boolean;
-}
+/** Base document type. */
+export type Document = {
+	_id: string;
+	[key: string]: DocumentValue;
+};
 
 /** Checking the object for storage suitability. */
-export type Acceptable<T extends Document> = { [K in keyof T]: T[K] & DocumentValue };
+export type ValidSchema<T extends Document> =
+	& {
+		[K in keyof T]: T[K] & DocumentValue;
+	}
+	& { _id: string };
 
-/** Any document-like object. */
-export type Document = { [key: string]: DocumentValue };
+/** Database initialization config. */
+export interface DatabaseConfig {
+	kv?: Deno.Kv;
+	path?: string;
+}
+
+/** Collection initialization config. */
+export interface CollectionConfig<T extends Document = Document> {
+	name: string;
+	validator?: (document: unknown) => void;
+	indexes?: CollectionConfigIndexes<T>;
+}
+
+// TODO: Rename generics from T to TDocument, TValue etc.
+
+/** Indexes configuration. */
+export type CollectionConfigIndexes<T extends Document = Document> = (Exclude<keyof T, '_id'> & string)[];
 
 /** Array of document values. */
 export type DocumentArray = DocumentValue[];
 
+/** Array of document values. */
+export type DocumentObject = { [key: string]: DocumentValue };
+
 /** Supported documents values. */
-export type DocumentValue = DocumentPrimitive | Document | DocumentArray;
+export type DocumentValue = DocumentPrimitive | DocumentObject | DocumentArray;
 
 /** Supported primitives. */
-export type DocumentPrimitive = string | number | boolean | null;
+export type DocumentPrimitive =
+	| string
+	| number
+	| boolean
+	| null
+	| undefined
+	| bigint
+	| Uint8Array
+	| Map<any, DocumentValue>
+	| Set<DocumentValue>
+	| Date
+	| RegExp;
 
-/** Documents selection criteria. */
-export type Query<T extends Document = Document> = { [K in keyof T]?: QueryValue<T[K]> };
+export type SearchQuery<T extends Document = Document> =
+	| SearchQueryObject<T>
+	| SearchQueryFunction<T>
+	| undefined;
 
-/** Possible search query values. */
-export type QueryValue<T extends DocumentValue = DocumentValue> = DocumentValue | ((value: Readonly<T>) => boolean) | RegExp | undefined;
+export type SearchQueryObject<T extends Document = Document> = {
+	[K in keyof T]?: SearchQueryValue<T[K]>;
+};
 
-/** Manual вocuments selection function. */
-export type QueryFunction<T extends Document = Document> = (document: Readonly<T>) => boolean;
+export type SearchQueryValue<T extends DocumentValue = DocumentValue> = T | ((value: T) => boolean) | RegExp | undefined;
 
-/** The modifications to apply. */
-export type Update<T extends Document = Document> = { [K in keyof T]?: UpdateValue<T[K]> };
+/** Manual documents selection function */
+export type SearchQueryFunction<T> = (document: T) => boolean;
 
-/** Possible update values. */
-export type UpdateValue<T extends DocumentValue = DocumentValue> = T | ((value: T, field: string, document: Document) => T) | undefined;
+export type UpdateQuery<T extends Document = Document> =
+	| UpdateQueryObject<T>
+	| UpdateQueryFunction<T>;
 
-/** Manual modifications applying. */
-export type UpdateFunction<T extends Document = Document> = (document: T) => T | null;
+export type UpdateQueryObject<T extends Document = Document> = {
+	[K in Exclude<keyof T, '_id'>]?: UpdateQueryValue<T[K]>;
+};
 
-/** Documents sort query. */
-export type SortQuery = { [key: string]: 'asc' | 'desc' };
+export type UpdateQueryValue<T extends DocumentValue = DocumentValue> = T | ((value: T) => T);
 
-/** Projection query. */
-export type Projection<T extends Document> = Partial<{ [K in keyof T]: boolean }>;
+export type UpdateQueryFunction<T extends Document> = (document: T) => T;
+
+/**
+ * Documents sort query.
+ */
+export type SortQuery<T extends Document> = { [K in keyof T]?: 'asc' | 'desc' | 1 | -1 };
+
+/**
+ * Pick key and make it optional.
+ */
+export type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+
+/**
+ * Simplify type to improve type hints shown in editors.
+ */
+export type Simplify<T> = { [K in keyof T]: T[K] } & {};
+
+export type DocumentWithoutId<T extends Document> = Simplify<PartialBy<T, '_id'>>;

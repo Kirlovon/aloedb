@@ -1,55 +1,43 @@
-import { Database } from './database.ts';
-
-import {
-	Document,
-	Query,
-	QueryFunction,
-	Acceptable,
-	SortQuery
-} from './types.ts';
-
-import {
-	isString,
-	isNumber,
-	isObject,
-	sortDocuments
-} from './utils.ts';
+import type { Database } from './database.ts';
+import { Search } from './core/search.ts';
+import { Query } from './query.ts';
+import { sortDocuments } from './utils.ts';
+import { Document, SortQuery } from './types.ts';
 
 /** Cursor skipping method. */
-export type SkipMethod = { type: 'skip', parameter: number };
+export type SkipMethod = { type: 'skip'; parameter: number };
 
 /** Cursor sorting method. */
-export type SortMethod = { type: 'sort', parameter: SortQuery };
+export type SortMethod = { type: 'sort'; parameter: SortQuery<any> };
 
 /** Cursor limiting method. */
-export type LimitMethod = { type: 'limit', parameter: number };
+export type LimitMethod = { type: 'limit'; parameter: number };
 
 /** All Cursor methods. */
 export type CursorMethod = SkipMethod | SortMethod | LimitMethod;
 
+interface CursorParams {
+	db: Database;
+	query: Query;
+	indexedKeys: Set<string>;
+	collectionName: string;
+}
+
 /**
- * Database Cursor.
- * Used for `db.select()` method.
+ * AloeDB Cursor. Used for searching in the database.
  */
-export class Cursor<Schema extends Acceptable<Schema> = Document> {
+export class Cursor<Schema extends Document = Document> {
+	protected db: Database;
+	protected query: Query;
+	protected collectionName: string;
+	protected indexedKeys: Set<string>;
+	protected methods: CursorMethod[] = [];
 
-	/** Cursor methods to execute. */
-	private methods: CursorMethod[] = [];
-
-	/** Database instance. */
-	private instance: Database<Schema>;
-
-	/** Documents selection criteria. */
-	private query?: Query<Schema> | QueryFunction<Schema>;
-
-	/**
-	 * Cursor initialization
-	 * @param instance Database instance.
-	 * @param query Documents selection criteria.
-	 */
-	constructor(instance: Database<Schema>, query?: Query<Schema> | QueryFunction<Schema>) {
-		this.instance = instance;
+	constructor({ db, query, indexedKeys, collectionName }: CursorParams) {
+		this.db = db;
 		this.query = query;
+		this.indexedKeys = indexedKeys;
+		this.collectionName = collectionName;
 	}
 
 	/**
@@ -57,8 +45,8 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 	 * @param offset The number of documents to skip.
 	 * @returns Cursor instance.
 	 */
-	public skip(offset: number): this {
-		if (!isNumber(offset)) throw new TypeError('Offset must be a number');
+	public skip(offset: number) {
+		if (offset < 0) throw new Error('Offset must be a positive number');
 		this.methods.push({ type: 'skip', parameter: offset });
 		return this;
 	}
@@ -68,8 +56,8 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 	 * @param size Maximum number of documents.
 	 * @returns Cursor instance.
 	 */
-	public limit(size: number): this {
-		if (!isNumber(size)) throw new TypeError('Size must be a number');
+	public limit(size: number) {
+		if (size < 0) throw new Error('Limit must be positive number');
 		this.methods.push({ type: 'limit', parameter: size });
 		return this;
 	}
@@ -79,79 +67,147 @@ export class Cursor<Schema extends Acceptable<Schema> = Document> {
 	 * @param sort Documents sort query.
 	 * @returns Cursor instance.
 	 */
-	public sort(sort: SortQuery): this {
-		if (!isObject(sort)) throw new TypeError('Sort query must be a string or an object');
+	public sort(sort: SortQuery<Schema>) {
 		this.methods.push({ type: 'sort', parameter: sort });
 		return this;
 	}
 
 	/**
-	 * Get the number of documents.
+	 * Get the number of matching documents.
 	 * @returns Number of documents.
 	 */
-	async count(): Promise<number> {
-		const documents: Schema[] = await this.execute();
-		return documents.length;
+	public async count(): Promise<number> {
+		const { collectionName, indexedKeys, query } = this;
+		let count = 0;
+
+		if (this.methods.length > 0) {
+			const documents = await this.getMany();
+			return documents.length;
+		} else {
+			const kv = await this.db.getKv();
+			const iterator = Search({ kv, query, indexedKeys, collectionName });
+			for await (const _entity of iterator) count += 1;
+		}
+
+		return count;
 	}
 
 	/**
-	 * Get one documents.
+	 * Get one matched document.
 	 * @returns One document. Null if nothing found.
 	 */
-	async getOne(): Promise<Schema | null> {
-		const documents: Schema[] = await this.execute();
-		return documents.length > 0 ? documents[0] : null;
+	public async getOne(): Promise<Schema | null> {
+		const { collectionName, indexedKeys } = this;
+
+		if (this.methods.length > 0) {
+			const documents = await this.getMany();
+			return documents[0] || null;
+		} else {
+			const kv = await this.db.getKv();
+			const iterator = Search({ kv, query: this.query, indexedKeys, collectionName });
+			for await (const entity of iterator) return entity.value as Schema;
+		}
+
+		return null;
 	}
 
 	/**
-	 * Get all documents.
+	 * Get all matched documents.
 	 * @returns Found documents.
 	 */
-	async getMany(): Promise<Schema[]> {
-		const documents: Schema[] = await this.execute();
+	public async getMany(): Promise<Schema[]> {
+		const { collectionName, indexedKeys, query } = this;
+		let documents: Schema[] = [];
+
+		// Get limit of the documents, required to execute methods
+		const limit = this.getRequiredDocumentsNumber();
+
+		// Collect documents
+		const kv = await this.db.getKv();
+		const iterator = Search({ kv, query, indexedKeys, collectionName });
+
+		for await (const entity of iterator) {
+			documents.push(entity.value as Schema);
+			if (documents.length >= limit) break;
+		}
+
+		// Apply methods
+		if (this.methods.length > 0) documents = this.executeMethods(documents);
+
 		return documents;
 	}
 
 	/**
-	 * Execute cursor methods & get the result.
-	 * @returns Documents found by cursor.
+	 * Get Iterator to iterate over found documents.
+	 * @returns Iterator.
 	 */
-	private async execute(): Promise<Schema[]> {
+	public async *list(): AsyncGenerator<Document> {
+		const { collectionName, indexedKeys, query } = this;
 
-		// Select documents
-		let documents: Schema[] = await this.instance.findMany(this.query);
+		const kv = await this.db.getKv();
+		const iterator = Search({ kv, query, indexedKeys, collectionName });
 
-		// Execute cursor methods
+		if (this.methods.length > 0) {
+			const documents: Schema[] = [];
+			for await (const entity of iterator) documents.push(entity.value as Schema);
+			for (const document of this.executeMethods(documents)) yield document as Document;
+		} else {
+			for await (const entity of iterator) yield entity.value as Document;
+		}
+	}
+
+	/**
+	 * Get minimal required number of documents to fetch.
+	 * Needed mostly for the optimization purposes.
+	 */
+	private getRequiredDocumentsNumber() {
+		let minLimitSize: number | undefined = undefined;
+		let skipOffsets = 0;
+
 		for (let i = 0; i < this.methods.length; i++) {
 			const method = this.methods[i];
 
-			if (documents.length === 0) return [];
-			documents = Cursor.executeMethod(documents, method);
+			switch (method.type) {
+				case 'limit':
+					if (typeof minLimitSize == 'undefined') minLimitSize = method.parameter;
+					break;
+				case 'skip':
+					if (typeof minLimitSize === 'undefined') skipOffsets += method.parameter;
+					break;
+				case 'sort':
+					if (typeof minLimitSize !== 'undefined') return minLimitSize + skipOffsets;
+					return Infinity;
+				default:
+					break;
+			}
 		}
 
-		return documents;
+		return (minLimitSize || 0) + skipOffsets;
 	}
 
 	/**
-	 * Execute cursor method.
-	 * @param documents Documents to process.
-	 * @param method Cursor method.
-	 * @returns Array with documents processed by cursor method.
+	 * Execute methods on the documents array.
+	 * @param documents List of documents to process.
 	 */
-	public static executeMethod<T extends Document>(documents: T[], method: CursorMethod): T[] {
-		if (method.type === 'skip') {
-			return documents.slice(method.parameter);
-		}
+	private executeMethods(documents: Schema[]) {
+		for (let i = 0; i < this.methods.length; i++) {
+			const method = this.methods[i];
 
-		if (method.type === 'sort') {
-			return sortDocuments(documents, method.parameter)
-		}
-
-		if (method.type === 'limit') {
-			return documents.slice(0, method.parameter);
+			switch (method.type) {
+				case 'limit':
+					documents = documents.slice(0, method.parameter);
+					break;
+				case 'skip':
+					documents = documents.slice(method.parameter);
+					break;
+				case 'sort':
+					documents = sortDocuments<Schema>(documents, method.parameter);
+					break;
+				default:
+					break;
+			}
 		}
 
 		return documents;
 	}
 }
-

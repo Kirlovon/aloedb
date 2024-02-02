@@ -1,4 +1,4 @@
-// Initializtion
+// Initialization
 document.addEventListener('DOMContentLoaded', async () => {
 	const response = await fetch('/tasks');
 	const data = await response.json();

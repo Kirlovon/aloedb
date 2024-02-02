@@ -1,35 +1,39 @@
 <p align="center">
-	<img src="https://raw.githubusercontent.com/Kirlovon/AloeDB/master/other/head.png" alt="AloeDB Logo" width="256">
+	<img src="./other/head.png" alt="AloeDB Logo" width="220">
 </p>
 
 <p align="center">
 	<h3 align="center">AloeDB</h3>
-	<p align="center"><i>Light, Embeddable, NoSQL database for Deno</i></p>
+	<p align="center"><i>Light, Embeddable, NoSQL database for Deno & Deno Deploy</i></p>
 </p>
 
 <br>
 
+> ℹ️ **AloeDB v2** was rewritten from the ground up! Its moved from the JSON storage engine to the new Deno KV.
+
+<br>
+
 ## ✨ Features
-* 🎉 Simple to use API, similar to [MongoDB](https://www.mongodb.com/)!
+* 🎉 Simple to use Document-Oriented API!
 * 🚀 Optimized for a large number of operations.
 * ⚖ No dependencies, even without [std](https://deno.land/std)!
-* 📁 Stores data in readable JSON file.
+* ☁ Deno Deploy support!
 
 <br>
 
 ## 📦 Importing
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts'
+import { Database } from 'https://deno.land/x/aloedb@2.0.0/mod.ts'
 ```
 
 <br>
 
 ## 📖 Example
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
+import { Database, Base } from 'https://deno.land/x/aloedb@2.0.0/mod.ts';
 
 // Structure of stored documents
-interface Film {
+interface Film extends Base {
     title: string;
     year: number;
     film: boolean;
@@ -38,10 +42,13 @@ interface Film {
 }
 
 // Initialization
-const db = new Database<Film>('./path/to/the/file.json');
+const db = new Database('./path/to/the/file.json');
+
+// Collection specification
+const films = db.collection<Film>('films');
 
 // Insert operations
-await db.insertOne({
+await films.insertOne({
     title: 'Drive',
     year: 2012,
     film: true,
@@ -50,13 +57,13 @@ await db.insertOne({
 });
 
 // Search operations
-const found = await db.findOne({ title: 'Drive', film: true });
+const found = await films.findOne({ title: 'Drive', film: true });
 
 // Update operations
-await db.updateOne({ title: 'Drive' }, { year: 2011 });
+await films.updateOne({ title: 'Drive' }, { year: 2011 });
 
 // Delete operations
-await db.deleteOne({ title: 'Drive' });
+await films.deleteOne({ title: 'Drive' });
 ```
 _P.S. You can find a complete example [here](https://github.com/Kirlovon/AloeDB/tree/master/example)!_
 
@@ -69,40 +76,30 @@ This database is not aimed at a heavily loaded backend, but its speed should be 
 To give you an example, here is the speed of a database operations with *1000* documents:
 
 | Insertion      | Searching     | Updating      | Deleting      |
-| -------------  | ------------- | ------------- | ------------- |
+|:---------------|:--------------|:--------------|:--------------|
 | 300k _ops/sec_ | 80k _ops/sec_ | 40k _ops/sec_ | 45k _ops/sec_ |
 
 <br>
 
-## 📚 Guide
+## 📚 Documentation
 
 ### Initialization
 ```typescript
-import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
+import { Database, Base } from 'https://deno.land/x/aloedb@2.0.0/mod.ts';
 
-interface Schema {
+interface Schema extends Base {
 	username: string;
 	password: string;
 }
 
-const db = new Database<Schema>({
-	path: './data.json',
-	pretty: true,
-	autoload: true,
-	autosave: true,
-	optimize: true,
-	immutable: true,
-	validator: (document: any) => {}
-});
+const db = new Database({ path: './data.db' });
+
+const users = db.collection<Schema>('users');
+
 ```
 The following fields are available for configuration:
-* `path` - Path to the database file. If undefined, data will be stored only in-memory. _(Default: undefined)_
-* `pretty` - Save data in easy-to-read format. _(Default: true)_
-* `autoload` - Automatically load the file synchronously when initializing the database. _(Default: true)_
-* `autosave` - Automatically save data to the file after inserting, updating and deleting documents.  _(Default: true)_
-* `optimize` - Optimize data writing. If enabled, the data will be written many times faster in case of a large number of operations.  _(Default: true)_
-* `immutable` - Automatically deeply clone all returned objects. _(Default: true)_
-* `validator` - Runtime documents validation function. If the document does not pass the validation, just throw the error.
+* `path` - Path to the database file. If undefined, data will be stored in temp folder. _(Default: undefined)_
+* `kv` - Custom Deno Kv instance. If undefined, the new Kv instance will be automatically created.
 
 Also, you can initialize the database in the following ways:
 ```typescript
@@ -118,23 +115,26 @@ const db = new Database('./path/to/the/file.json');
 <br>
 
 ### Typization
-AloeDB allows you to specify the schema of documents.
-By doing this, you will get auto-completion and types validation. This is a **completely optional** feature that can make it easier for you to work with the database.
+AloeDB allows you to specify the schema of your documents.
+By doing this, you will get auto-completion and types validation. This is a **completely optional, but highly recommended** feature that can make it easier for you to work with the database.
 
 Just specify an interface that contains only the types supported by the database _(strings, numbers, booleans, nulls, array, objects)_, and everything will works like magic! 🧙‍
 
 ```typescript
 // Your schema
-interface User {
+interface User extends Base {
 	username: string;
 	password: string;
 }
 
 // Initialize a database with a specific schema
-const db = new Database<User>();
+const db = new Database();
 
-await db.insertOne({ username: 'bob', password: 'qwerty' }); // Ok 👌
-await db.insertOne({ username: 'greg' }); // Error: Property 'password' is missing
+// Initialize a collection for users
+const users = db.collection<Schema>('users');
+
+await users.insertOne({ username: 'bob', password: 'qwerty' }); // Ok 👌
+await users.insertOne({ username: 'greg' }); // Error: Property 'password' is missing
 ```
 
 <br>
@@ -241,7 +241,7 @@ console.log(updated3); // { key: 6, value: 'six' }
 
 ### Documents
 ```typescript
-db.documents;
+await collection.documents();
 ```
 This property stores all your documents. It is better not to modify these property manually, as database methods do a bunch of checks for security and stability reasons. But, if you do this, be sure to call `await db.save()` method after your changes.
 
@@ -249,7 +249,7 @@ This property stores all your documents. It is better not to modify these proper
 
 ### InsertOne
 ```typescript
-await db.insertOne({ foo: 'bar' });
+await collection.insertOne({ foo: 'bar' });
 ```
 Inserts a document into the database. After insertion, it returns the inserted document.
 
@@ -259,7 +259,7 @@ All fields with `undefined` values will be deleted. Empty documents will not be 
 
 ### InsertMany
 ```typescript
-await db.insertMany([{ foo: 'bar' }, { foo: 'baz' }]);
+await collection.insertMany([{ foo: 'bar' }, { foo: 'baz' }]);
 ```
 Inserts multiple documents into the database. After insertion, it returns the array with inserted documents.
 
@@ -269,7 +269,7 @@ This operation is **atomic**, so if something goes wrong, nothing will be insert
 
 ### FindOne
 ```typescript
-await db.findOne({ foo: 'bar' });
+await collection.findOne({ foo: 'bar' });
 ```
 Returns a document that matches the search query. Returns `null` if nothing found.
 
@@ -277,7 +277,7 @@ Returns a document that matches the search query. Returns `null` if nothing foun
 
 ### FindMany
 ```typescript
-await db.findMany({ foo: 'bar' });
+await collection.findMany({ foo: 'bar' });
 ```
 Returns an array of documents matching the search query.
 
@@ -285,7 +285,7 @@ Returns an array of documents matching the search query.
 
 ### UpdateOne
 ```typescript
-await db.updateOne({ foo: 'bar' }, { foo: 'baz' });
+await collection.updateOne({ foo: 'bar' }, { foo: 'baz' });
 ```
 Modifies an existing document that match search query. Returns the found document with applied modifications. If nothing is found, it will return `null`.
 
@@ -297,7 +297,7 @@ This operation is **atomic**, so if something goes wrong, nothing will be update
 
 ### UpdateMany
 ```typescript
-await db.updateMany({ foo: 'bar' }, { foo: 'baz' });
+await collection.updateMany({ foo: 'bar' }, { foo: 'baz' });
 ```
 Modifies all documents that match search query. Returns an array with updated documents.
 
@@ -307,7 +307,7 @@ This operation is **atomic**, so if something goes wrong, nothing will be update
 
 ### DeleteOne
 ```typescript
-await db.deleteOne({ foo: 'bar' });
+await collection.deleteOne({ foo: 'bar' });
 ```
 Deletes first found document that matches the search query. After deletion, it will return deleted document.
 
@@ -315,7 +315,7 @@ Deletes first found document that matches the search query. After deletion, it w
 
 ### DeleteMany
 ```typescript
-await db.deleteMany({ foo: 'bar' });
+await collection.deleteMany({ foo: 'bar' });
 ```
 Deletes all documents that matches the search query. After deletion, it will return all deleted documents.
 
@@ -325,7 +325,7 @@ This operation is **atomic**, so if something goes wrong, nothing will be delete
 
 ### Count
 ```typescript
-await db.count({ foo: 'bar' });
+await collection.count({ foo: 'bar' });
 ```
 Returns the number of documents found by the search query. If the query is not specified or empty, it will return total number of documents in the database.
 
@@ -333,7 +333,7 @@ Returns the number of documents found by the search query. If the query is not s
 
 ### Drop
 ```typescript
-await db.drop();
+await collection.drop();
 ```
 Removes all documents from the database.
 
@@ -341,7 +341,7 @@ Removes all documents from the database.
 
 ### Load
 ```typescript
-await db.load();
+await collection.load();
 ```
 Loads, parses and validates documents from the specified database file. If the file is not specified, then nothing will be done.
 
@@ -414,6 +414,8 @@ Keep in mind that you **cannot specify the same file for multiple instances!**
 
 ```typescript
 import { Database } from 'https://deno.land/x/aloedb@0.9.0/mod.ts';
+
+const db = new Database('./data.db');
 
 // Initialize database instances
 const users = new Database({ path: './users.json' });
@@ -507,17 +509,6 @@ await db.save();
 
 console.log(db.documents); // [{ field: 'The Nights' }]
 ```
-
-<br>
-
-## 🦄 Community Ports
-Surprisingly, this library was ported to other programming languages without my participation. **Much appreciation to this guys for their work!** ❤
-
-🔵 **[AlgoeDB](https://github.com/wkirk01/AlgoeDB)** - database for Go, made by [wkirk01](https://github.com/wkirk01)!
-
-🟠 **[AlroeDB](https://github.com/wkirk01/AlroeDB)** - database for Rust, also made by [wkirk01](https://github.com/wkirk01)!
-
-🟢 **[AloeDB-Node](https://github.com/wouterdebruijn/AloeDB-Node)** - port to the Node.js, made by [Wouter de Bruijn](https://github.com/wouterdebruijn)! _(With awesome Active Records example)_
 
 <br>
 

@@ -6,7 +6,7 @@
 	},
 	{
 		"id": "WeJ69TBQLnblJLqT1kItc",
-		"text": "Make coffie ☕",
+		"text": "Make coffee ☕",
 		"done": false
 	},
 	{
@@ -17,6 +17,6 @@
 	{
 		"id": "0iCzpv60u5BO8W0_jAi9A",
 		"text": "Take a rest 🛌",
-		"done": true
+		"done": false
 	}
 ]

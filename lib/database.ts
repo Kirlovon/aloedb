@@ -1,438 +1,122 @@
-// Copyright 2020-2021 the AloeDB authors. All rights reserved. MIT license.
+import { Document } from './types.ts';
+import { Collection } from './collection.ts';
+import { CollectionConfig, DatabaseConfig, ValidSchema } from './types.ts';
 
-import { Writer } from './writer.ts';
-import { Reader } from './reader.ts';
-import { Cursor } from './cursor.ts';
-
-import {
-	findOneDocument,
-	findMultipleDocuments,
-	updateDocument,
-	deserializeStorage,
-	executeProjection
-} from './core.ts';
-
-import {
-	Document,
-	DatabaseConfig,
-	Query,
-	QueryFunction,
-	Update,
-	UpdateFunction,
-	Acceptable,
-	Projection,
-	Options,
-} from './types.ts';
-
-import {
-	deepClone,
-	cleanArray,
-	isObjectEmpty,
-	isString,
-	isBoolean,
-	isNull,
-	isArray,
-	isObject,
-	isFunction,
-	isUndefined,
-	sanitizeObject
-} from './utils.ts';
-
-// TODO: Add sort, limit, skip as options
-// TODO: Add new cursor methods: filter, map, forEach, reverse
-// TODO: Add projections
-// TODO: Add events like beforeInsert, afterInsert, beforeUpdate, afterUpdate, beforeDelete, afterDelete
-// TODO: Finish testing
-
-/**
- * # AloeDB 🌿
- * Light, Embeddable, NoSQL database for Deno
- *
- * [Deno](https://deno.land/x/aloedb) | [Github](https://github.com/Kirlovon/AloeDB)
- */
-export class Database<Schema extends Acceptable<Schema> = Document> {
+export class Database {
+	/**
+	 * Deno.KV storage
+	 */
+	protected kv?: Deno.Kv;
 
 	/**
-	 * In-Memory documents storage.
-	 *
-	 * ***WARNING:*** It is better not to modify these documents manually, as the changes will not pass the necessary checks.
-	 * ***However, if you modify storage manualy, call the method `await db.save()` to save your changes.***
+	 * Cached collections
 	 */
-	public documents: Schema[] = [];
+	protected collections: Map<string, Collection<any>> = new Map();
 
-	/** Data writing manager. */
-	private readonly writer?: Writer;
-
-	/** Database configuration. */
-	private readonly config: DatabaseConfig = {
+	/**
+	 * Database config
+	 */
+	protected readonly config: DatabaseConfig = {
+		kv: undefined,
 		path: undefined,
-		pretty: true,
-		autoload: true,
-		autosave: true,
-		batching: true,
-		immutable: true,
-		sanitize: true,
-		foolproof: true,
-		validator: undefined
 	};
 
 	/**
-	 * Create database collection to store documents.
+	 * Create database instance to store documents.
 	 * @param config Database configuration or path to the database file.
 	 */
+	constructor(path?: string);
+	constructor(config?: Partial<DatabaseConfig>);
 	constructor(config?: Partial<DatabaseConfig> | string) {
-		if (isUndefined(config)) config = { autoload: false, autosave: false };
-		if (isString(config)) config = { path: config, autoload: true, autosave: true };
-		if (!isObject(config)) throw new TypeError('Config must be an object or a string');
+		if (typeof config === 'string') this.config = { ...this.config, path: config };
+		if (typeof config === 'object') this.config = { ...this.config, ...config };
+		if (this.config.kv) this.kv = this.config.kv;
+	}
 
-		// Disable autosave if path is not specified
-		if (isUndefined(config?.path)) config.autosave = false;
+	/**
+	 * Open database
+	 */
+	public async open() {
+		if (this.kv) return;
+		this.kv = await Deno.openKv(this.config.path);
+	}
 
-		// Merge default config with users config
-		this.config = { ...this.config, ...config };
+	/**
+	 * Initiate database collection
+	 * @param config Collection configuration.
+	 */
+	public collection<Schema extends ValidSchema<Schema> = Document>(config: CollectionConfig<Schema> | string): Collection<Schema> {
+		if (typeof config === 'string') config = { name: config };
 
-		// Writer initialization
-		if (this.config.path) {
-			this.writer = new Writer(this.config.path, this.config.pretty, this.config.foolproof);
-			if (this.config.autoload) this.loadSync();
+		// Return collection from cache
+		if (this.collections.has(config.name)) {
+			return this.collections.get(config.name) as Collection<Schema>;
+		}
+
+		const collection = new Collection(this, config);
+		this.collections.set(config.name, collection);
+
+		return collection as Collection<Schema>;
+	}
+
+	/**
+	 * Export database content.
+	 */
+	public async dump() {
+		const kv = await this.getKv();
+		const iterator = kv.list({ prefix: [] });
+
+		const data: Record<string, Document[]> = {};
+
+		for await (const entity of iterator) {
+			const collectionName = entity.key[0];
+			const indexedKey = entity.key[1];
+
+			// Skip indices and invalid entity keys
+			if (typeof collectionName !== 'string' || typeof indexedKey !== 'string') continue;
+			if (indexedKey !== '_id') continue;
+
+			if (!data[collectionName]) data[collectionName] = [];
+			data[collectionName].push(entity.value as Document);
+		}
+
+		return data;
+	}
+
+	/**
+	 * Delete all database content.
+	 * @param raw If true, instead of deleting each document individually, all entities in the KV store will be deleted.
+	 */
+	public async drop(raw = false) {
+		const kv = await this.getKv();
+		const iterator = kv.list({ prefix: [] }, { batchSize: 500 });
+
+		// Drop raw data
+		if (raw) {
+			for await (const entity of iterator) await kv.delete(entity.key);
+			return;
+		}
+
+		for await (const entity of iterator) {
+			const collectionName = entity.key[0] as string;
+			const documentId = (entity.value as Document)._id;
+			await this.collection(collectionName).deleteOne({ _id: documentId });
 		}
 	}
 
 	/**
-	 * Select documents by search query.
-	 * @param query Documents selection criteria.
-	 * @returns Cursor instance.
+	 * Close database.
 	 */
-	public select(query?: Query<Schema> | QueryFunction<Schema>) {
-		return new Cursor<Schema>(this, query);
+	public close() {
+		if (this.kv) this.kv.close();
+		this.kv = undefined;
 	}
 
 	/**
-	 * Insert a document.
-	 * @param document Document to insert.
-	 * @param options Additional configurations.
-	 * @returns Inserted document.
+	 * Get Deno.Kv instance. If database is not opened, new Kv instance will be created.
 	 */
-	public async insertOne(document: Schema, options?: Partial<Options>): Promise<Schema> {
-		if (!isObject(document)) throw new TypeError('Document must be an object');
-
-		let { immutable, validator, autosave, sanitize } = this.config;
-		if (options && isBoolean(options.immutable)) immutable = options.immutable;
-
-		if (sanitize) sanitizeObject(document);
-		if (validator) validator(document);
-		if (isObjectEmpty(document)) return {} as Schema;
-
-		const internal: Schema = deepClone(document);
-		this.documents.push(internal);
-		if (autosave) await this.save();
-
-		return immutable ? deepClone(internal) : internal;
-	}
-
-	/**
-	 * Inserts multiple documents.
-	 * @param documents Array of documents to insert.
-	 * @param options Additional configurations.
-	 * @returns Array of inserted documents.
-	 */
-	public async insertMany(documents: Schema[], options?: Partial<Options>): Promise<Schema[]> {
-		if (!isArray(documents)) throw new TypeError('Input must be an array');
-
-		let { immutable, validator, autosave, sanitize } = this.config;
-		if (options && isBoolean(options.immutable)) immutable = options.immutable;
-
-		const inserted: Schema[] = [];
-
-		for (let i = 0; i < documents.length; i++) {
-			const document: Schema = documents[i];
-			if (!isObject(document)) throw new TypeError('Documents must be an objects');
-
-			if (sanitize) sanitizeObject(document);
-			if (validator) validator(document);
-			if (isObjectEmpty(document)) continue;
-
-			const internal: Schema = deepClone(document);
-			inserted.push(internal);
-		}
-
-		this.documents = [...this.documents, ...inserted];
-		if (autosave) await this.save();
-
-		return immutable ? deepClone(inserted) : inserted;
-	}
-
-	/**
-	 * Find document by search query.
-	 * @param query Document selection criteria.
-	 * @param options Additional configurations.
-	 * @returns Found document.
-	 */
-	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema | null>;
-	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>, projection?: Projection<Schema>): Promise<Partial<Schema> | null>;
-	public async findOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>, projection?: Projection<Schema>): Promise<Schema | Partial<Schema> | null> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-
-		let { immutable } = this.config;
-		if (options && isBoolean(options.immutable)) immutable = options.immutable;
-
-		const found: number | null = findOneDocument<Schema>(query, this.documents);
-		if (isNull(found)) return null;
-
-		const document = immutable ? deepClone(this.documents[found]) : this.documents[found];
-
-		if (isObject(projection)) return executeProjection<Schema>(document, projection);
-		return document;
-	}
-
-	/**
-	 * Find multiple documents by search query.
-	 * @param query Documents selection criteria.
-	 * @param options Additional configurations.
-	 * @returns Found documents.
-	 */
-	public async findMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema[]> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-
-		let { immutable } = this.config;
-		if (options && isBoolean(options.immutable)) immutable = options.immutable;
-
-		// Optimization for empty queries
-		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) {
-			return immutable ? deepClone(this.documents) : [...this.documents];
-		}
-
-		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
-		if (found.length === 0) return [];
-
-		let documents: Schema[] = [];
-
-		for (let i = 0; i < found.length; i++) {
-			const position: number = found[i];
-			const document: Schema = this.documents[position];
-			documents.push(document);
-		}
-
-		return immutable ? deepClone(documents) : documents;
-	}
-
-	/**
-	 * Modifies an existing document that match search query.
-	 * @param query Document selection criteria.
-	 * @param update The modifications to apply.
-	 * @param options Additional configurations.
-	 * @returns Found document with applied modifications.
-	 */
-	public async updateOne(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Partial<Options>): Promise<Schema | null> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
-
-		let { validator, autosave, immutable, sanitize } = this.config;
-		if (options && isBoolean(options.immutable)) immutable = options.immutable;
-
-		const found: number | null = findOneDocument<Schema>(query, this.documents);
-		if (isNull(found)) return null;
-
-		const position: number = found;
-		const document: Schema = this.documents[position];
-		const updated: Schema = updateDocument<Schema>(document, update);
-
-		if (sanitize) sanitizeObject(updated);
-		if (validator) validator(updated);
-
-		if (isObjectEmpty(updated)) {
-			this.documents.splice(position, 1);
-			if (autosave) await this.save();
-			return {} as Schema;
-		}
-
-		this.documents[position] = updated;
-		if (autosave) await this.save();
-
-		return immutable ? deepClone(updated) : updated;
-	}
-
-	/**
-	 * Modifies all documents that match search query.
-	 * @param query Documents selection criteria.
-	 * @param update The modifications to apply.
-	 * @param options Additional configurations.
-	 * @returns Found documents with applied modifications.
-	 */
-	public async updateMany(query: Query<Schema> | QueryFunction<Schema>, update: Update<Schema> | UpdateFunction<Schema>, options?: Partial<Options>): Promise<Schema[]> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-		if (!isObject(update) && !isFunction(update)) throw new TypeError('Update must be an object or function');
-
-		let { validator, autosave, immutable, sanitize } = this.config;
-		if (options && isBoolean(options.immutable)) immutable = options.immutable;
-
-		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
-		if (found.length === 0) return [];
-
-		const temporary: Schema[] = [...this.documents];
-		const updatedDocuments: Schema[] = [];
-		let deleted: boolean = false;
-
-		for (let i = 0; i < found.length; i++) {
-			const position: number = found[i];
-			const document: Schema = temporary[position];
-			const updated: Schema = updateDocument<Schema>(document, update);
-
-			if (sanitize) sanitizeObject(updated);
-			if (validator) validator(updated);
-
-			if (isObjectEmpty(updated)) {
-				delete temporary[position];
-				deleted = true;
-				continue;
-			}
-
-			temporary[position] = updated;
-			updatedDocuments.push(updated);
-		}
-
-		this.documents = temporary;
-		if (deleted) this.documents = cleanArray(this.documents);
-		if (autosave) await this.save();
-
-		return immutable ? deepClone(updatedDocuments) : updatedDocuments;
-	}
-
-	/**
-	 * Deletes first found document that matches the search query.
-	 * @param query Document selection criteria.
-	 * @param options Additional configurations.
-	 * @returns Deleted document.
-	 */
-	public async deleteOne(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema | null> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-		const { autosave } = this.config;
-
-		const found: number | null = findOneDocument<Schema>(query, this.documents);
-		if (isNull(found)) return null;
-
-		const position: number = found;
-		const deleted: Schema = this.documents[position];
-
-		this.documents.splice(position, 1);
-		if (autosave) await this.save();
-
-		return deleted;
-	}
-
-	/**
-	 * Deletes all documents that matches the search query.
-	 * @param query Document selection criteria.
-	 * @param options Additional configurations.
-	 * @returns Array of deleted documents.
-	 */
-	public async deleteMany(query?: Query<Schema> | QueryFunction<Schema>, options?: Partial<Options>): Promise<Schema[]> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-		const { autosave } = this.config;
-
-		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
-		if (found.length === 0) return [];
-
-		const temporary: Schema[] = [...this.documents];
-		const deleted: Schema[] = [];
-
-		for (let i = 0; i < found.length; i++) {
-			const position: number = found[i];
-			const document: Schema = temporary[position];
-
-			deleted.push(document);
-			delete temporary[position];
-		}
-
-		this.documents = cleanArray(temporary);
-		if (autosave) await this.save();
-
-		return deleted;
-	}
-
-	/**
-	 * Count found documents.
-	 * @param query Documents selection criteria.
-	 * @returns Documents count.
-	 */
-	public async count(query?: Query<Schema> | QueryFunction<Schema>): Promise<number> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-
-		// Optimization for empty queries
-		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return this.documents.length;
-
-		const found: number[] = findMultipleDocuments<Schema>(query, this.documents);
-		return found.length;
-	}
-
-	/**
-	 * Check if document exists.
-	 * @param query Documents selection criteria.
-	 * @returns True if document exists.
-	 */
-	public async exists(query?: Query<Schema> | QueryFunction<Schema>): Promise<boolean> {
-		if (!isUndefined(query) && !isObject(query) && !isFunction(query)) throw new TypeError('Query must be an object or function');
-
-		// Optimization for empty queries
-		if (isUndefined(query) || (isObject(query) && isObjectEmpty(query))) return true;
-
-		const found = findOneDocument<Schema>(query, this.documents);
-		return !isNull(found);
-	}
-
-	/**
-	 * Delete all documents.
-	 */
-	public async drop(): Promise<void> {
-		this.documents = [];
-		if (this.config.autosave) await this.save();
-	}
-
-	/**
-	 * Load data from storage file.
-	 */
-	public async load(): Promise<void> {
-		const { path, validator } = this.config;
-		if (!path) return;
-
-		const content: string = await Reader.read(path);
-		const documents: Document[] = deserializeStorage(content);
-
-		if (validator) {
-			for (let i = 0; i < documents.length; i++) validator(documents[i])
-		}
-
-		this.documents = documents as Schema[];
-	}
-
-	/**
-	 * Synchronously load data from storage file.
-	 */
-	public loadSync(): void {
-		const { path, validator } = this.config;
-		if (!path) return;
-
-		const content: string = Reader.readSync(path);
-		const documents: Document[] = deserializeStorage(content);
-
-		if (validator) {
-			for (let i = 0; i < documents.length; i++) validator(documents[i])
-		}
-
-		this.documents = documents as Schema[];
-	}
-
-	/**
-	 * Write documents to the database storage file.
-	 * Called automatically after each insert, update or delete operation. _(Only if `autosave` parameter is set to `true`)_
-	 */
-	public async save(): Promise<void> {
-		if (!this.writer) return;
-
-		if (this.config.batching) {
-			this.writer.write(this.documents); // Should be without await
-		} else {
-			await this.writer.write(this.documents);
-		}
+	public async getKv() {
+		if (!this.kv) await this.open();
+		return this.kv as Deno.Kv;
 	}
 }

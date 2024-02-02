@@ -1,0 +1,26 @@
+{
+    "tasks": {},
+    "lint": {
+        "rules": {
+            "exclude": [
+                "no-explicit-any"
+            ]
+        },
+        "exclude": [
+            "old_lib/"
+        ]
+    },
+    "fmt": {
+        "include": [
+            "lib/",
+            "tests/",
+            "mod.ts"
+        ],
+        "useTabs": true,
+        "lineWidth": 200,
+        "indentWidth": 4,
+        "singleQuote": true,
+        "semiColons": true,
+        "proseWrap": "preserve"
+    }
+}
