@@ -12,7 +12,6 @@ interface InsertParams {
  * Insert document into KV store
  */
 export async function Insert({ kv, document, indexedKeys, collectionName }: InsertParams) {
-	const insertedEntities: Deno.KvEntry<Document>[] = [];
 	const ao = kv.atomic();
 
 	// Check that Document with the same key not exists

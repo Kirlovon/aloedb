@@ -24,6 +24,11 @@ export class Query {
 			return;
 		}
 
+		// String query (Transform to object with the search by query)
+		if (typeof value === 'string') {
+			this.value = { _id: value };
+		}
+
 		// Normal query
 		if (isObjectLiteral(value)) {
 			let keys = Object.keys(value);

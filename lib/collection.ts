@@ -1,18 +1,26 @@
-import type { Database } from './database.ts';
-import { Query } from './query.ts';
-import { Cursor } from './cursor.ts';
-import { createIndexesSet, ensureId, isObjectLiteral } from './utils.ts';
-import { CollectionConfig, Document, DocumentWithoutId, SearchQuery, UpdateQuery, ValidSchema } from './types.ts';
+import type { Database } from "./database.ts";
+import { Query } from "./query.ts";
+import { Cursor } from "./cursor.ts";
+import { createIndexesSet, ensureId, isObjectLiteral } from "./utils.ts";
+import {
+	CollectionConfig,
+	Document,
+	DocumentWithoutId,
+	SearchQuery,
+	UpdateQuery,
+	ValidSchema,
+} from "./types.ts";
 
-import { Insert } from './core/insert.ts';
-import { Update } from './core/update.ts';
-import { Delete } from './core/delete.ts';
+import { Insert } from "./core/insert.ts";
+import { Update } from "./core/update.ts";
+import { Delete } from "./core/delete.ts";
 
 export class Collection<Schema extends ValidSchema<Schema>> {
 	protected db: Database;
 	protected name: string;
 	protected indexedKeys: Set<string> = new Set();
 	protected validator?: (document: unknown) => void;
+	protected idGenerator?: (document: Schema) => string;
 
 	/**
 	 * Initiate database collection.
@@ -21,18 +29,25 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 	 * @param config Collection configuration
 	 */
 	constructor(db: Database, config: CollectionConfig<Schema>) {
-		if (typeof config?.name !== 'string') throw new TypeError('Collection name must be a string');
+		if (typeof config?.name !== "string")
+			throw new TypeError("Collection name must be a string");
 		config.name = config.name.trim();
 
-		if (config.name.startsWith('_')) throw new Error('Collection names cannot start with "_"');
-		if (config.name === '') throw new Error('Collection name cant be empty');
+		if (config.name.startsWith("_"))
+			throw new Error('Collection names cannot start with "_"');
+		if (config.name === "")
+			throw new Error("Collection name cant be empty");
 
 		this.db = db;
 		this.name = config.name;
+		this.idGenerator = () => crypto.randomUUID();
 
-		if (Array.isArray(config.indexes)) this.indexedKeys = createIndexesSet(config.indexes);
-		if (typeof config?.validator === 'function') this.validator = config.validator;
-
+		if (Array.isArray(config.indexes))
+			this.indexedKeys = createIndexesSet(config.indexes);
+		if (typeof config?.validator === "function")
+			this.validator = config.validator;
+		if (typeof config?.idGenerator === "function")
+			this.idGenerator = config.idGenerator;
 	}
 
 	/**
@@ -42,7 +57,10 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 		const kv = await this.db.getKv();
 		const docs: Schema[] = [];
 
-		const iterator = kv.list({ prefix: [this.name, '_id'] }, { batchSize: 500 });
+		const iterator = kv.list(
+			{ prefix: [this.name, "_id"] },
+			{ batchSize: 500 }
+		);
 		for await (const entity of iterator) docs.push(entity.value as Schema);
 
 		return docs;
@@ -63,9 +81,12 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 	 * @param options Additional configurations.
 	 * @returns Inserted document.
 	 */
-	public async insertOne(document: DocumentWithoutId<Schema>): Promise<Schema> {
+	public async insertOne(
+		document: DocumentWithoutId<Schema>
+	): Promise<Schema> {
 		const kv = await this.db.getKv();
-		if (!isObjectLiteral(document)) throw new TypeError('Document must be a plain object');
+		if (!isObjectLiteral(document))
+			throw new TypeError("Document must be a plain object");
 
 		// Set ID
 		const documentWithId = ensureId(document as ValidSchema<Schema>);
@@ -97,10 +118,15 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 		try {
 			for (let i = 0; i < documents.length; i++) {
 				const document = documents[i];
-				if (!isObjectLiteral(document)) throw new TypeError('All documents must be a plain objects');
+				if (!isObjectLiteral(document))
+					throw new TypeError(
+						"All documents must be a plain objects"
+					);
 
 				// Set ID
-				const documentWithId = ensureId(document as ValidSchema<Schema>);
+				const documentWithId = ensureId(
+					document as ValidSchema<Schema>
+				);
 
 				// Run validation
 				if (this.validator) this.validator(documentWithId);
@@ -150,7 +176,10 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 	 * @param update The modifications to apply.
 	 * @returns Found document with applied modifications.
 	 */
-	public async updateOne(query: SearchQuery<Schema>, update: UpdateQuery<Schema>) {
+	public async updateOne(
+		query: SearchQuery<Schema>,
+		update: UpdateQuery<Schema>
+	) {
 		const kv = await this.db.getKv();
 
 		// Update
@@ -173,8 +202,10 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 	 * @param update The modifications to apply.
 	 * @returns Found documents with applied modifications.
 	 */
-	public async updateMany(query: SearchQuery<Schema>, update: UpdateQuery<Schema>) {
-	}
+	public async updateMany(
+		query: SearchQuery<Schema>,
+		update: UpdateQuery<Schema>
+	) {}
 
 	/**
 	 * Deletes first found document that matches the search query.
@@ -237,12 +268,18 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 
 		// Raw data clean-up
 		if (raw) {
-			const iterator = kv.list({ prefix: [this.name] }, { batchSize: 500 });
+			const iterator = kv.list(
+				{ prefix: [this.name] },
+				{ batchSize: 500 }
+			);
 			for await (const entity of iterator) await kv.delete(entity.key);
 			return;
 		}
 
-		const iterator = kv.list({ prefix: [this.name, '_id'] }, { batchSize: 500 });
+		const iterator = kv.list(
+			{ prefix: [this.name, "_id"] },
+			{ batchSize: 500 }
+		);
 		for await (const entity of iterator) {
 			await Delete({
 				kv,
@@ -255,9 +292,7 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 	}
 
 	// TODO
-	public async reIndex() {
-
-	}
+	public async reIndex() {}
 
 	/**
 	 * Get cursor
@@ -273,3 +308,4 @@ export class Collection<Schema extends ValidSchema<Schema>> {
 		});
 	}
 }
+

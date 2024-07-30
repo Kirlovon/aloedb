@@ -44,7 +44,7 @@ export function sortDocuments<T>(array: T[], query: SortQuery<any>): T[] {
 export function ensureId(document: Partial<Document>): ValidSchema<Document> {
 	const documentWithId = { _id: crypto.randomUUID(), ...document };
 	if (typeof documentWithId._id !== 'string') throw new TypeError('Document "_id" must be a string or a number');
-	// TODO: Make it string or number
+	// TODO: Convert it to a string or number
 
 	return documentWithId;
 }

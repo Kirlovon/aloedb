@@ -27,6 +27,7 @@ export interface DatabaseConfig {
 /** Collection initialization config. */
 export interface CollectionConfig<T extends Document = Document> {
 	name: string;
+	idGenerator?: (document: T) => string;
 	validator?: (document: unknown) => void;
 	indexes?: CollectionConfigIndexes<T>;
 }
@@ -62,6 +63,7 @@ export type DocumentPrimitive =
 export type SearchQuery<T extends Document = Document> =
 	| SearchQueryObject<T>
 	| SearchQueryFunction<T>
+	| string
 	| undefined;
 
 export type SearchQueryObject<T extends Document = Document> = {

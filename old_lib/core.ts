@@ -13,44 +13,44 @@ import { cleanArray, deepClone, deepCompare, isArray, isFunction, isObject, isOb
  * @returns Found document index.
  */
 export function findOneDocument<T extends Document>(
-	query: Query<T> | QueryFunction<T> | undefined,
-	documents: T[],
+  query: Query<T> | QueryFunction<T> | undefined,
+  documents: T[],
 ): number | null {
-	if (isFunction(query)) {
-		for (let i = 0; i < documents.length; i++) {
-			const document = documents[i];
-			const isMatched = query(document);
-			if (isMatched) return i;
-		}
+  if (isFunction(query)) {
+    for (let i = 0; i < documents.length; i++) {
+      const document = documents[i];
+      const isMatched = query(document);
+      if (isMatched) return i;
+    }
 
-		return null;
-	}
+    return null;
+  }
 
-	if (isUndefined(query) || isObjectEmpty(query)) {
-		return documents.length > 0 ? 0 : null;
-	}
+  if (isUndefined(query) || isObjectEmpty(query)) {
+    return documents.length > 0 ? 0 : null;
+  }
 
-	for (let i = 0; i < documents.length; i++) {
-		const document = documents[i];
-		let suitable = true;
+  for (let i = 0; i < documents.length; i++) {
+    const document = documents[i];
+    let suitable = true;
 
-		for (const key in query) {
-			const documentValue = document[key];
-			const queryValue = query[key];
-			const isMatched = matchValues(
-				queryValue as QueryValue,
-				documentValue,
-			);
-			if (isMatched) continue;
+    for (const key in query) {
+      const documentValue = document[key];
+      const queryValue = query[key];
+      const isMatched = matchValues(
+        queryValue as QueryValue,
+        documentValue,
+      );
+      if (isMatched) continue;
 
-			suitable = false;
-			break;
-		}
+      suitable = false;
+      break;
+    }
 
-		if (suitable) return i;
-	}
+    if (suitable) return i;
+  }
 
-	return null;
+  return null;
 }
 
 /**
@@ -60,61 +60,61 @@ export function findOneDocument<T extends Document>(
  * @returns Found documents indexes.
  */
 export function findMultipleDocuments<T extends Document>(
-	query: Query<T> | QueryFunction<T> | undefined,
-	documents: T[],
+  query: Query<T> | QueryFunction<T> | undefined,
+  documents: T[],
 ): number[] {
-	let found = [];
-	let firstSearch = true;
+  let found = [];
+  let firstSearch = true;
 
-	if (isFunction(query)) {
-		for (let i = 0; i < documents.length; i++) {
-			const document = documents[i];
-			const isMatched = query(document);
-			if (isMatched) found.push(i);
-		}
+  if (isFunction(query)) {
+    for (let i = 0; i < documents.length; i++) {
+      const document = documents[i];
+      const isMatched = query(document);
+      if (isMatched) found.push(i);
+    }
 
-		return found;
-	}
+    return found;
+  }
 
-	if (isUndefined(query) || isObjectEmpty(query)) {
-		return numbersList(documents.length - 1);
-	}
+  if (isUndefined(query) || isObjectEmpty(query)) {
+    return numbersList(documents.length - 1);
+  }
 
-	for (const key in query) {
-		const queryValue = query[key];
+  for (const key in query) {
+    const queryValue = query[key];
 
-		if (firstSearch) {
-			firstSearch = false;
+    if (firstSearch) {
+      firstSearch = false;
 
-			for (let i = 0; i < documents.length; i++) {
-				const document = documents[i];
-				const documentValue = document[key];
-				const isMatched = matchValues(
-					queryValue as QueryValue,
-					documentValue,
-				);
-				if (isMatched) found.push(i);
-			}
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        const documentValue = document[key];
+        const isMatched = matchValues(
+          queryValue as QueryValue,
+          documentValue,
+        );
+        if (isMatched) found.push(i);
+      }
 
-			if (found.length === 0) return [];
-			continue;
-		}
+      if (found.length === 0) return [];
+      continue;
+    }
 
-		for (let i = 0; i < found.length; i++) {
-			if (isUndefined(found[i])) continue;
-			const position = found[i];
-			const document = documents[position];
-			const documentValue = document[key];
-			const isMatched = matchValues(
-				queryValue as QueryValue,
-				documentValue,
-			);
-			if (isMatched) continue;
-			delete found[i];
-		}
-	}
+    for (let i = 0; i < found.length; i++) {
+      if (isUndefined(found[i])) continue;
+      const position = found[i];
+      const document = documents[position];
+      const documentValue = document[key];
+      const isMatched = matchValues(
+        queryValue as QueryValue,
+        documentValue,
+      );
+      if (isMatched) continue;
+      delete found[i];
+    }
+  }
 
-	return cleanArray(found);
+  return cleanArray(found);
 }
 
 /**
@@ -124,26 +124,26 @@ export function findMultipleDocuments<T extends Document>(
  * @returns New document with applied updates or null if document should be deleted.
  */
 export function updateDocument<T extends Document>(
-	document: T,
-	update: Update<T> | UpdateFunction<T>,
+  document: T,
+  update: Update<T> | UpdateFunction<T>,
 ): T {
-	let newDocument: T | null = deepClone(document);
+  let newDocument: T | null = deepClone(document);
 
-	if (isFunction(update)) {
-		newDocument = update(newDocument);
-		if (!newDocument) return {} as T;
-		if (!isObject(newDocument)) {
-			throw new TypeError('Document must be an object');
-		}
-	} else {
-		for (const key in update) {
-			const value = update[key];
+  if (isFunction(update)) {
+    newDocument = update(newDocument);
+    if (!newDocument) return {} as T;
+    if (!isObject(newDocument)) {
+      throw new TypeError('Document must be an object');
+    }
+  } else {
+    for (const key in update) {
+      const value = update[key];
 
-			newDocument[key] = isFunction(value) ? value(newDocument[key], key, newDocument) : (value as T[Extract<keyof T, string>]);
-		}
-	}
+      newDocument[key] = isFunction(value) ? value(newDocument[key], key, newDocument) : (value as T[Extract<keyof T, string>]);
+    }
+  }
 
-	return deepClone(newDocument);
+  return deepClone(newDocument);
 }
 
 /**
@@ -153,18 +153,18 @@ export function updateDocument<T extends Document>(
  * @returns Are the values equal.
  */
 export function matchValues(
-	queryValue: QueryValue,
-	documentValue: DocumentValue,
+  queryValue: QueryValue,
+  documentValue: DocumentValue,
 ): boolean {
-	if (isFunction(queryValue)) return queryValue(documentValue) ? true : false;
+  if (isFunction(queryValue)) return queryValue(documentValue) ? true : false;
 
-	if (isRegExp(queryValue)) return isString(documentValue) && queryValue.test(documentValue);
+  if (isRegExp(queryValue)) return isString(documentValue) && queryValue.test(documentValue);
 
-	if (isArray(queryValue) || isObject(queryValue)) return deepCompare(queryValue, documentValue);
+  if (isArray(queryValue) || isObject(queryValue)) return deepCompare(queryValue, documentValue);
 
-	if (isUndefined(queryValue)) return isUndefined(documentValue);
+  if (isUndefined(queryValue)) return isUndefined(documentValue);
 
-	return queryValue === documentValue;
+  return queryValue === documentValue;
 }
 
 /**
@@ -174,20 +174,20 @@ export function matchValues(
  * @returns Document with applied options.
  */
 export function executeOptions<T extends Document>(
-	documents: T[],
-	options: Options,
+  documents: T[],
+  options: Options,
 ): Partial<T[]> {
-	for (const key in options) {
-		if (key === 'sort' || key === 'limit' || key === 'skip') {
-			const method = {
-				type: key,
-				parameter: options[key],
-			} as CursorMethod;
-			documents = Cursor.executeMethod(documents, method);
-		}
-	}
+  for (const key in options) {
+    if (key === 'sort' || key === 'limit' || key === 'skip') {
+      const method = {
+        type: key,
+        parameter: options[key],
+      } as CursorMethod;
+      documents = Cursor.executeMethod(documents, method);
+    }
+  }
 
-	return documents;
+  return documents;
 }
 
 /**
@@ -197,16 +197,16 @@ export function executeOptions<T extends Document>(
  * @returns Document with applied projection query.
  */
 export function executeProjection<T extends Document>(
-	document: T,
-	projection: Projection<T>,
+  document: T,
+  projection: Projection<T>,
 ): Partial<T> {
-	const projected: Partial<T> = {};
+  const projected: Partial<T> = {};
 
-	for (const key in projection) {
-		if (projection[key]) projected[key] = document[key];
-	}
+  for (const key in projection) {
+    if (projection[key]) projected[key] = document[key];
+  }
 
-	return projected;
+  return projected;
 }
 
 /**
@@ -215,21 +215,21 @@ export function executeProjection<T extends Document>(
  * @returns Array of documents.
  */
 export function deserializeStorage(content: string): Document[] {
-	const trimmed = content.trim();
-	if (trimmed === '') return [];
+  const trimmed = content.trim();
+  if (trimmed === '') return [];
 
-	const documents = JSON.parse(trimmed);
-	if (!isArray(documents)) {
-		throw new TypeError('Database storage should be an array of objects');
-	}
+  const documents = JSON.parse(trimmed);
+  if (!isArray(documents)) {
+    throw new TypeError('Database storage should be an array of objects');
+  }
 
-	for (let i = 0; i < documents.length; i++) {
-		const document = documents[i];
-		if (!isObject(document)) {
-			throw new TypeError('Database storage should contain only objects');
-		}
-		if (isObjectEmpty(document)) delete documents[i];
-	}
+  for (let i = 0; i < documents.length; i++) {
+    const document = documents[i];
+    if (!isObject(document)) {
+      throw new TypeError('Database storage should contain only objects');
+    }
+    if (isObjectEmpty(document)) delete documents[i];
+  }
 
-	return cleanArray(documents);
+  return cleanArray(documents);
 }
